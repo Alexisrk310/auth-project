@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
@@ -11,6 +11,7 @@ import { useLanguage } from '@/components/LanguageProvider'
 import { useToast } from '@/components/ui/Toast' // Custom Toast
 import { supabase } from '@/lib/supabase/client'
 import { v4 as uuidv4 } from 'uuid'
+import { SHIPPING_RATES, DEFAULT_SHIPPING_COST } from '@/config/shipping'
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, total } = useCartStore()
@@ -28,7 +29,11 @@ export default function CartPage() {
     phone: '',
   })
 
-  const SHIPPING_COST = 15000 // Flat rate for Colombia
+  // Calculate dynamic shipping cost
+  const shippingCost = useMemo(() => {
+    if (!formData.city) return 0
+    return SHIPPING_RATES[formData.city] || DEFAULT_SHIPPING_COST
+  }, [formData.city])
 
   // Empty State
   if (items.length === 0) {
@@ -65,6 +70,7 @@ export default function CartPage() {
       }
 
       const orderId = uuidv4()
+      const finalTotal = total() + shippingCost
       
       const { error: matchError } = await supabase
         .from('orders')
@@ -72,12 +78,12 @@ export default function CartPage() {
             id: orderId,
             user_id: userId,
             status: 'pending',
-            total: total() + SHIPPING_COST,
+            total: finalTotal,
             customer_name: formData.name,
             shipping_address: formData.address,
             city: formData.city,
             phone: formData.phone,
-            shipping_cost: SHIPPING_COST
+            shipping_cost: shippingCost
         })
 
       if (matchError) {
@@ -92,7 +98,7 @@ export default function CartPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-            items: [...items, { id: 'shipping', name: 'Shipping Cost', price: SHIPPING_COST, quantity: 1 }],
+            items: [...items, { id: 'shipping', name: 'Shipping Cost', price: shippingCost, quantity: 1 }],
             orderId 
         }),
       })
@@ -223,11 +229,9 @@ export default function CartPage() {
                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none"
                                 >
                                     <option value="">{t('checkout.select_city')}</option>
-                                    <option value="Bogotá">Bogotá</option>
-                                    <option value="Medellín">Medellín</option>
-                                    <option value="Cali">Cali</option>
-                                    <option value="Barranquilla">Barranquilla</option>
-                                    <option value="Cartagena">Cartagena</option>
+                                    {Object.keys(SHIPPING_RATES).map(city => (
+                                        <option key={city} value={city}>{city}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div>
@@ -255,11 +259,16 @@ export default function CartPage() {
                         </div>
                         <div className="flex justify-between text-muted-foreground">
                         <span>{t('checkout.shipping_cost')}</span>
-                        <span>{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(SHIPPING_COST)}</span>
+                        <span className={!formData.city ? 'text-xs italic' : ''}>
+                            {formData.city 
+                                ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(shippingCost)
+                                : t('checkout.select_city_calc') || 'Select city'
+                            }
+                        </span>
                         </div>
                         <div className="border-t border-border/50 pt-4 flex justify-between font-bold text-xl">
                         <span>{t('checkout.total')}</span>
-                        <span>{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(total() + SHIPPING_COST)}</span>
+                        <span>{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(total() + shippingCost)}</span>
                         </div>
                     </div>
 

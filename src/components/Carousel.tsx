@@ -103,11 +103,11 @@ export default function Carousel() {
       </div>
 
        {/* Controls */}
-       <button onClick={prevSlide} className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-primary text-white rounded-full backdrop-blur-sm transition-all z-10">
-          <ChevronLeft className="w-8 h-8" />
+       <button onClick={prevSlide} className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-1 md:p-2 bg-black/50 hover:bg-primary text-white rounded-full backdrop-blur-sm transition-all z-10">
+          <ChevronLeft className="w-5 h-5 md:w-8 md:h-8" />
        </button>
-       <button onClick={nextSlide} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-primary text-white rounded-full backdrop-blur-sm transition-all z-10">
-          <ChevronRight className="w-8 h-8" />
+       <button onClick={nextSlide} className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-1 md:p-2 bg-black/50 hover:bg-primary text-white rounded-full backdrop-blur-sm transition-all z-10">
+          <ChevronRight className="w-5 h-5 md:w-8 md:h-8" />
        </button>
        
        {/* Dots */}

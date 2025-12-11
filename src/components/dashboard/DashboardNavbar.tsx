@@ -11,7 +11,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 import { supabase } from '@/lib/supabase/client'
 
-export function DashboardNavbar() {
+interface DashboardNavbarProps {
+  onMenuClick: () => void
+}
+
+export function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
   const { language, setLanguage, t } = useLanguage()
   const { user, signOut } = useAuth()
   const pathname = usePathname()
@@ -64,11 +68,18 @@ export function DashboardNavbar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 h-20 bg-card/95 backdrop-blur-md border-b border-border z-40 ml-0 lg:ml-64">
+      <nav className="fixed top-0 left-0 right-0 h-20 bg-card/95 backdrop-blur-md border-b border-border z-40 ml-0 lg:ml-64 transition-all duration-300">
         <div className="h-full px-6 flex items-center justify-between gap-6">
           
-          {/* Left: Breadcrumbs & Search */}
-          <div className="flex items-center gap-6 flex-1">
+          {/* Left: Menu Toggle, Breadcrumbs & Search */}
+          <div className="flex items-center gap-4 flex-1">
+            <button 
+                onClick={onMenuClick}
+                className="lg:hidden p-2 hover:bg-muted rounded-lg transition-colors"
+            >
+                <Menu className="w-5 h-5" />
+            </button>
+
             {/* Breadcrumbs */}
             <div className="hidden md:flex items-center gap-2 text-sm">
               {breadcrumbs.map((crumb, index) => (

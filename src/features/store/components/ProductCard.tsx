@@ -20,7 +20,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const { t } = useLanguage()
   const { addToast } = useToast()
   const { toggleFavorite, isFavorite } = useFavorites()
-  const [selectedSize, setSelectedSize] = useState<string>('M')
+  const [selectedSize, setSelectedSize] = useState<string>(product.sizes?.[0] || 'M')
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -30,7 +30,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
       id: product.id,
       name: product.name,
       price: product.price,
-      image_url: product.image_url,
+      image_url: product.images?.[0] || product.image_url || '/placeholder.png',
       description: product.description,
       size: selectedSize
     })
@@ -85,7 +85,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
             
             {/* Size Selector */}
             <div className="flex justify-center gap-1 bg-black/40 p-1.5 rounded-xl backdrop-blur-md" onClick={(e) => e.preventDefault()}>
-                {['S', 'M', 'L', 'XL'].map(size => (
+                {(product.sizes?.length ? product.sizes : ['S', 'M', 'L', 'XL']).map(size => (
                     <button
                         key={size}
                         onClick={(e) => {

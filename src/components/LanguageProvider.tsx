@@ -36,6 +36,7 @@ const translations: Translations = {
     'auth.name': 'Nombre Completo',
     // New
     'home.new_arrivals': 'Nuevos Lanzamientos',
+    'home.new_drops': 'Nuevos',
     'home.view_all': 'Ver Todo',
     'filters.title': 'Filtros',
     'filters.gender': 'Género',
@@ -102,6 +103,7 @@ const translations: Translations = {
     'nav.orders': 'Mis Pedidos',
     'nav.favorites': 'Favoritos',
     'nav.menu': 'Menú',
+    'nav.language': 'Idioma',
     'favorites.login_msg': 'Por favor inicia sesión para ver tus favoritos.',
     'favorites.empty': 'No tienes productos guardados aún.',
     'favorites.browse': 'Explorar Tienda',
@@ -310,6 +312,7 @@ const translations: Translations = {
     'nav.orders': 'My Orders',
     'nav.favorites': 'Favorites',
     'nav.menu': 'Menu',
+    'nav.language': 'Language',
     'favorites.login_msg': 'Please login to view your favorites.',
     'favorites.empty': 'No saved items yet.',
     'favorites.browse': 'Browse Shop',
@@ -325,6 +328,7 @@ const translations: Translations = {
     'footer.address': 'Bogotá, Colombia',
     // New
     'home.new_arrivals': 'New Arrivals',
+    'home.new_drops': 'New Drops',
     'home.view_all': 'View All',
     'filters.title': 'Filters',
     'filters.gender': 'Gender',
@@ -566,6 +570,7 @@ const translations: Translations = {
     'nav.orders': 'Mes Commandes',
     'nav.favorites': 'Favoris',
     'nav.menu': 'Menu',
+    'nav.language': 'Langue',
     'favorites.login_msg': 'Connectez-vous pour voir vos favoris.',
     'favorites.empty': 'Aucun favori pour le moment.',
     'favorites.browse': 'Explorer la Boutique',
@@ -581,6 +586,7 @@ const translations: Translations = {
     'footer.address': 'Bogotá, Colombie',
     // New
     'home.new_arrivals': 'Nouveautés',
+    'home.new_drops': 'Nouveautés',
     'home.view_all': 'Tout Voir',
     'filters.title': 'Filtres',
     'filters.gender': 'Genre',
@@ -788,9 +794,11 @@ const translations: Translations = {
     'nav.home': 'Início',
     'nav.shop': 'Loja',
     'nav.discounts': 'Descontos',
+    'nav.language': 'Idioma',
     'hero.title': 'O Futuro da Moda',
     'hero.subtitle': 'Coleção curada de streetwear distópico.',
-    'product.new': 'NOVO',
+    'home.new_arrivals': 'Novos Lançamentos', // Assuming this key lines up with PT section approximately
+    'home.new_drops': 'Novos',
     'products.add': 'Adicionar',
     'auth.welcome': 'Bem-vindo à ThunderXis',
     'auth.subtitle': 'Insira suas credenciais',
@@ -834,7 +842,6 @@ const translations: Translations = {
     'checkout.missing_fields': 'Campos de envio ausentes',
     'cart.added_success': 'Adicionado ao carrinho',
      // New
-    'home.new_arrivals': 'Novidades',
     'home.view_all': 'Ver Tudo',
     'filters.title': 'Filtros',
     'filters.gender': 'Gênero',

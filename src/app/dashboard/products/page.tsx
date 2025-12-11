@@ -16,7 +16,7 @@ interface Product {
   category: string
   images: string[]
   stock: number
-  gender?: 'Men' | 'Women' | 'Unisex'
+  gender?: 'men' | 'women' | 'unisex'
   is_new?: boolean
   sizes?: string[]
   colors?: string[]
@@ -42,7 +42,7 @@ export default function ProductsPage() {
     description: '',
     category: '',
     stock: '',
-    gender: 'Unisex' as 'Men' | 'Women' | 'Unisex',
+    gender: 'unisex' as 'men' | 'women' | 'unisex',
     is_new: false,
     sizes: [] as string[],
     colors: [] as string[],
@@ -184,7 +184,7 @@ export default function ProductsPage() {
       description: '',
       category: '',
       stock: '',
-      gender: 'Unisex',
+      gender: 'unisex',
       is_new: false,
       sizes: [],
       colors: [],
@@ -204,7 +204,7 @@ export default function ProductsPage() {
         description: product.description || '',
         category: product.category || '',
         stock: product.stock?.toString() || '0',
-        gender: product.gender || 'Unisex',
+        gender: (product.gender?.toLowerCase() as any) || 'unisex',
         is_new: product.is_new || false,
         sizes: product.sizes || [],
         colors: product.colors || [],
@@ -307,7 +307,7 @@ export default function ProductsPage() {
                         {product.is_new && (
                           <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">NEW</span>
                         )}
-                        <p className="text-xs text-muted-foreground">{product.gender}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{product.gender}</p>
                       </div>
                     </div>
                   </td>
@@ -439,9 +439,9 @@ export default function ProductsPage() {
                       value={formData.gender} 
                       onChange={e => setFormData({...formData, gender: e.target.value as any})}
                     >
-                      <option value="Unisex">Unisex</option>
-                      <option value="Men">Men</option>
-                      <option value="Women">Women</option>
+                      <option value="unisex">Unisex</option>
+                      <option value="men">Men</option>
+                      <option value="women">Women</option>
                     </select>
                   </div>
                 </div>

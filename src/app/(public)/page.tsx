@@ -57,10 +57,10 @@ export default function ShopPage() {
             {/* Product Grid */}
             <div className="flex-1">
                <div className="flex justify-between items-center mb-8">
-                  <h2 className="text-3xl font-bold flex items-center gap-3">
+                  <h2 className="text-3xl font-bold flex flex-wrap items-center gap-4 sm:gap-6">
                     {t('home.new_arrivals')}
-                    <span className="text-xs font-normal text-muted-foreground px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
-                        {products.length} New Drops
+                    <span className="text-xs font-normal text-primary px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 whitespace-nowrap">
+                        {products.length} {t('home.new_drops')}
                     </span>
                   </h2>
                   <Link href="/shop" className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1">

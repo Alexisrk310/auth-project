@@ -8,7 +8,12 @@ import { useLanguage } from '@/components/LanguageProvider'
 import { useAuth } from '@/hooks/useAuth'
 import { LogoutModal } from '@/components/LogoutModal'
 
-export function DashboardSidebar() {
+interface DashboardSidebarProps {
+  isOpen: boolean
+  onClose: () => void
+}
+
+export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
   const pathname = usePathname()
   const { t } = useLanguage()
   const { signOut } = useAuth()
@@ -28,7 +33,15 @@ export function DashboardSidebar() {
 
   return (
     <>
-      <aside className="fixed left-0 top-0 h-full w-64 bg-card/95 backdrop-blur-sm border-r border-border/50 pt-24 pb-8 px-4 hidden lg:flex flex-col">
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-card/95 backdrop-blur-sm border-r border-border/50 pt-24 pb-8 px-4 flex flex-col z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'} lg:translate-x-0 lg:shadow-none`}>
          {/* Header */}
          <div className="mb-8 px-3">
             <h2 className="text-lg font-bold text-foreground">

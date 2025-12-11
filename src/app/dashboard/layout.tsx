@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useLanguage } from '@/components/LanguageProvider'
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar'
@@ -15,6 +15,7 @@ export default function DashboardLayout({
   const { user, role, loading } = useAuth()
   const router = useRouter()
   const { t } = useLanguage()
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
     // Basic Client-side protection
@@ -53,8 +54,8 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background flex">
-        <DashboardSidebar />
-        <DashboardNavbar />
+        <DashboardSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        <DashboardNavbar onMenuClick={() => setIsSidebarOpen(true)} />
         <main className="flex-1 lg:ml-64 pt-28 px-8 pb-8">
             {children}
         </main>
