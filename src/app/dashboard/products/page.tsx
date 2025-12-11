@@ -307,6 +307,11 @@ export default function ProductsPage() {
                         {product.is_new && (
                           <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">NEW</span>
                         )}
+                        {product.sale_price && product.sale_price < product.price && (
+                           <span className="ml-2 text-xs bg-rose-500/10 text-rose-600 px-2 py-0.5 rounded-full font-bold border border-rose-200">
+                             -{Math.round(((product.price - product.sale_price) / product.price) * 100)}%
+                           </span>
+                        )}
                         <p className="text-xs text-muted-foreground capitalize">{product.gender}</p>
                       </div>
                     </div>
@@ -317,7 +322,16 @@ export default function ProductsPage() {
                       {product.stock || 0}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm font-bold">${product.price}</td>
+                  <td className="px-6 py-4 text-sm font-bold">
+                    {product.sale_price && product.sale_price < product.price ? (
+                        <div className="flex flex-col">
+                            <span className="text-rose-600">${product.sale_price.toLocaleString('es-CO')}</span>
+                            <span className="text-xs text-muted-foreground line-through font-normal">${product.price.toLocaleString('es-CO')}</span>
+                        </div>
+                    ) : (
+                        <span>${product.price.toLocaleString('es-CO')}</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button 

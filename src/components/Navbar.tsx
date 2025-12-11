@@ -70,15 +70,19 @@ export default function Navbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-4">
-           {/* Language Switcher */}
+            {/* Language Switcher */}
            <div className="relative hidden md:block">
               <button 
                 onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-                className={`p-2 rounded-full transition-colors flex items-center gap-1 ${textColor} ${buttonHover}`}
+                className={`p-2 rounded-full transition-colors flex items-center gap-2 ${textColor} ${buttonHover}`}
               >
-                  <span className="text-lg">
-                    {language === 'es' ? '🇪🇸' : language === 'en' ? '🇺🇸' : language === 'fr' ? '🇫🇷' : '🇧🇷'}
-                  </span>
+                  <div className="relative w-6 h-4 overflow-hidden rounded shadow-sm">
+                    <img 
+                      src={`https://flagcdn.com/w40/${language === 'en' ? 'us' : language === 'pt' ? 'br' : language}.png`}
+                      alt={language}
+                      className="object-cover w-full h-full"
+                    />
+                  </div>
                   <span className="text-xs uppercase font-bold">{language}</span>
               </button>
               
@@ -97,11 +101,15 @@ export default function Navbar() {
                                     setLanguage(lang)
                                     setIsLangMenuOpen(false)
                                 }}
-                                className={`w-full text-left px-4 py-2 text-sm hover:bg-primary/10 transition-colors flex items-center gap-2 ${language === lang ? 'text-primary font-bold' : ''}`}
+                                className={`w-full text-left px-4 py-2 text-sm hover:bg-primary/10 transition-colors flex items-center gap-3 ${language === lang ? 'text-primary font-bold' : ''}`}
                             >
-                                <span className="text-lg">
-                                  {lang === 'es' ? '🇪🇸' : lang === 'en' ? '🇺🇸' : lang === 'fr' ? '🇫🇷' : '🇧🇷'}
-                                </span>
+                                <div className="relative w-6 h-4 overflow-hidden rounded shadow-sm">
+                                  <img 
+                                    src={`https://flagcdn.com/w40/${lang === 'en' ? 'us' : lang === 'pt' ? 'br' : lang}.png`}
+                                    alt={lang}
+                                    className="object-cover w-full h-full"
+                                  />
+                                </div>
                                 <span className="uppercase">{lang}</span>
                             </button>
                         ))}

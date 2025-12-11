@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ShoppingBag, Truck, Users, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, ShoppingBag, Truck, Users, Settings, LogOut, Home } from 'lucide-react'
 import { useLanguage } from '@/components/LanguageProvider'
 import { useAuth } from '@/hooks/useAuth'
 import { LogoutModal } from '@/components/LogoutModal'
@@ -79,7 +79,14 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
          </nav>
 
          {/* Footer */}
-         <div className="mt-auto pt-6 border-t border-border/50">
+         <div className="mt-auto pt-6 border-t border-border/50 space-y-1">
+            <Link 
+               href="/"
+               className="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all w-full font-medium text-sm"
+            >
+               <Home className="w-5 h-5" />
+               <span>{t('nav.home') || 'Go to Store'}</span>
+            </Link>
             <button 
                onClick={() => setIsLogoutModalOpen(true)}
                className="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/5 transition-all w-full font-medium text-sm"
