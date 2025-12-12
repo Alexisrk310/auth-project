@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import { Search, Mail, Shield, Trash2, Loader2, AlertCircle } from 'lucide-react'
+import { Search, Mail, Shield, Trash2, Loader2, AlertCircle, FileSpreadsheet, ArrowUpDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLanguage } from '@/components/LanguageProvider'
 import { TableSkeleton, StatsCardSkeleton } from '@/components/dashboard/skeletons'
+import * as ExcelJS from 'exceljs'
+import { saveAs } from 'file-saver'
 
 import { Modal } from '@/components/ui/Modal'
 
@@ -15,13 +17,21 @@ interface User {
   created_at: string
   role: 'user' | 'owner'
   full_name?: string
+  totalSpent: number
+  orderCount: number
+  lastActive: string | null
 }
+
+type SortField = 'created_at' | 'totalSpent' | 'orderCount' | 'lastActive'
+type SortOrder = 'asc' | 'desc'
 
 export default function DashboardUsers() {
   const { t } = useLanguage()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [sortField, setSortField] = useState<SortField>('totalSpent')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
   
   // Modal States
   const [modalConfig, setModalConfig] = useState<{
@@ -40,26 +50,126 @@ export default function DashboardUsers() {
   const [actionLoading, setActionLoading] = useState(false)
 
   useEffect(() => {
-    fetchUsers()
+    fetchUsersAndAnalytics()
   }, [])
 
-  const fetchUsers = async () => {
+  const fetchUsersAndAnalytics = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
+      
+      // 1. Fetch Profiles
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email, role, full_name, created_at')
-        .order('created_at', { ascending: false })
       
-      if (!error && data) {
-        setUsers(data as User[])
-      }
+      if (profilesError) throw profilesError
+
+      // 2. Fetch Orders for analytics
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders')
+        .select('user_id, total, created_at, status')
+        .neq('status', 'cancelled') // Exclude cancelled orders from spend
+
+      if (ordersError) throw ordersError
+
+      // 3. Aggregate Data
+      const usersWithStats = profiles?.map((profile: any) => {
+        const userOrders = orders?.filter(o => o.user_id === profile.id) || []
+        
+        const totalSpent = userOrders.reduce((acc, order) => acc + (order.total || 0), 0)
+        const orderCount = userOrders.length
+        
+        // Find last active date (latest order date)
+        const lastActive = userOrders.length > 0 
+          ? userOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0].created_at
+          : null
+
+        return {
+          ...profile,
+          totalSpent,
+          orderCount,
+          lastActive: lastActive || profile.created_at // Fallback to signup date
+        }
+      }) || []
+
+      setUsers(usersWithStats)
+
     } catch (e) {
-      console.error('Error fetching users:', e)
+      console.error('Error fetching data:', e)
     } finally {
       setLoading(false)
     }
   }
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortOrder('desc')
+    }
+  }
+
+  const sortedUsers = [...users].sort((a, b) => {
+    const aValue = a[sortField]
+    const bValue = b[sortField]
+    
+    // Handle null values
+    if (aValue === null) return 1
+    if (bValue === null) return -1
+    
+    // Compare
+    if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1
+    if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1
+    return 0
+  })
+
+  const filteredUsers = sortedUsers.filter(u =>
+    u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const handleExport = async () => {
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet('Top Users')
+
+    // Styling
+    worksheet.columns = [
+      { header: 'Email', key: 'email', width: 30 },
+      { header: 'Name', key: 'full_name', width: 25 },
+      { header: 'Role', key: 'role', width: 10 },
+      { header: 'Spent', key: 'totalSpent', width: 15 },
+      { header: 'Orders', key: 'orderCount', width: 10 },
+      { header: 'Last Active', key: 'lastActive', width: 20 },
+      { header: 'Joined', key: 'created_at', width: 20 },
+    ]
+
+    // Style Header
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF000000' }
+    }
+
+    filteredUsers.forEach(user => {
+      worksheet.addRow({
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        totalSpent: user.totalSpent,
+        orderCount: user.orderCount,
+        lastActive: user.lastActive ? new Date(user.lastActive).toLocaleDateString() : '-',
+        created_at: new Date(user.created_at).toLocaleDateString()
+      })
+    })
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    saveAs(blob, `ThunderXis_Users_${new Date().toISOString().split('T')[0]}.xlsx`)
+  }
+
+  // --- Actions ---
 
   const openRoleModal = (user: User) => {
     setModalConfig({
@@ -107,7 +217,7 @@ export default function DashboardUsers() {
             if (error) throw error
         }
 
-        await fetchUsers()
+        await fetchUsersAndAnalytics()
         closeModal()
     } catch (e: any) {
         console.error('Error:', e)
@@ -118,11 +228,6 @@ export default function DashboardUsers() {
     }
   }
 
-  const filteredUsers = users.filter(u =>
-    u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
@@ -131,15 +236,25 @@ export default function DashboardUsers() {
           <h1 className="text-3xl font-bold text-foreground">{t('dash.user_management')}</h1>
           <p className="text-muted-foreground">{t('dash.user_desc')}</p>
         </div>
-        <div className="relative w-full md:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input 
-            type="text" 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={t('dash.search_users')} 
-            className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-          />
+        <div className="flex gap-2 w-full md:w-auto">
+          <div className="relative w-full md:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input 
+              type="text" 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={t('dash.search_users')} 
+              className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+            />
+          </div>
+          <button 
+            onClick={handleExport}
+            className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-xl hover:bg-green-700 transition-colors shadow-sm"
+            title={t('dash.export_excel')}
+          >
+            <FileSpreadsheet className="w-5 h-5" />
+            <span className="hidden md:inline">Excel</span>
+          </button>
         </div>
       </div>
 
@@ -156,7 +271,7 @@ export default function DashboardUsers() {
       <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl shadow-lg overflow-hidden">
         {loading ? (
           <div className="p-4">
-             <TableSkeleton rows={8} columns={4} />
+             <TableSkeleton rows={8} columns={6} />
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="p-12 text-center text-muted-foreground">
@@ -168,8 +283,25 @@ export default function DashboardUsers() {
               <thead className="bg-muted/50 text-muted-foreground text-xs uppercase font-semibold">
                 <tr>
                   <th className="px-6 py-4">{t('dash.user')}</th>
+                  <th className="px-6 py-4">
+                    <button onClick={() => handleSort('totalSpent')} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      {t('dash.revenue')}
+                      <ArrowUpDown className="w-3 h-3" />
+                    </button>
+                  </th>
+                  <th className="px-6 py-4">
+                    <button onClick={() => handleSort('orderCount')} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      {t('dash.orders')}
+                      <ArrowUpDown className="w-3 h-3" />
+                    </button>
+                  </th>
+                  <th className="px-6 py-4">
+                    <button onClick={() => handleSort('lastActive')} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      Ult. Act.
+                      <ArrowUpDown className="w-3 h-3" />
+                    </button>
+                  </th>
                   <th className="px-6 py-4">{t('dash.role')}</th>
-                  <th className="px-6 py-4">{t('dash.joined')}</th>
                   <th className="px-6 py-4 text-right">{t('dash.actions')}</th>
                 </tr>
               </thead>
@@ -191,6 +323,17 @@ export default function DashboardUsers() {
                         </div>
                       </div>
                     </td>
+                    <td className="px-6 py-4 font-mono">
+                      ${user.totalSpent?.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="bg-secondary px-2 py-1 rounded-md text-xs font-semibold">
+                        {user.orderCount}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-xs text-muted-foreground">
+                      {user.lastActive ? new Date(user.lastActive).toLocaleDateString() : '-'}
+                    </td>
                     <td className="px-6 py-4">
                       <button
                         onClick={() => openRoleModal(user)}
@@ -207,13 +350,6 @@ export default function DashboardUsers() {
                           {t('dash.click_toggle')}
                         </span>
                       </button>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                      {new Date(user.created_at).toLocaleDateString('es-CO', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button 
@@ -240,7 +376,7 @@ export default function DashboardUsers() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-card/50 border border-border/50 rounded-xl p-4">
             <p className="text-sm text-muted-foreground">{t('dash.total_users')}</p>
             <p className="text-2xl font-black text-foreground">{users.length}</p>
@@ -250,8 +386,10 @@ export default function DashboardUsers() {
             <p className="text-2xl font-black text-purple-500">{users.filter(u => u.role === 'owner').length}</p>
           </div>
           <div className="bg-card/50 border border-border/50 rounded-xl p-4">
-            <p className="text-sm text-muted-foreground">{t('dash.regular_users')}</p>
-            <p className="text-2xl font-black text-blue-500">{users.filter(u => u.role === 'user').length}</p>
+            <p className="text-sm text-muted-foreground">LTV Total</p>
+            <p className="text-2xl font-black text-green-500">
+              ${users.reduce((acc, u) => acc + u.totalSpent, 0).toLocaleString()}
+            </p>
           </div>
         </div>
       )}

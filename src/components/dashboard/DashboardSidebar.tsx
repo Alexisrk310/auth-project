@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ShoppingBag, Truck, Users, Settings, LogOut, Home } from 'lucide-react'
+import { LayoutDashboard, ShoppingBag, Truck, Users, Settings, LogOut, Home, MessageSquare } from 'lucide-react'
 import { useLanguage } from '@/components/LanguageProvider'
 import { useAuth } from '@/hooks/useAuth'
 import { LogoutModal } from '@/components/LogoutModal'
@@ -23,6 +23,7 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
     { href: '/dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
     { href: '/dashboard/products', label: t('dash.products'), icon: ShoppingBag },
     { href: '/dashboard/orders', label: t('dash.orders'), icon: Truck },
+    { href: '/dashboard/reviews', label: t('dash.reviews'), icon: MessageSquare },
     { href: '/dashboard/users', label: t('dash.users'), icon: Users },
   ]
 

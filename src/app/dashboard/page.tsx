@@ -70,6 +70,8 @@ export default function DashboardOverview() {
         .select('*')
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString())
+        // Filter for valid "paid" statuses
+        .in('status', ['approved', 'paid', 'shipped', 'delivered', 'completed'])
         .order('created_at', { ascending: false })
 
       if (ordersError) throw ordersError
@@ -118,40 +120,74 @@ export default function DashboardOverview() {
     return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val)
   }
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!stats.recentOrders || stats.recentOrders.length === 0) {
       alert(t('dash.no_data_export'))
       return
     }
 
-    const headers = [
-      t('dash.order_id'),
-      t('dash.date'),
-      t('dash.customer'),
-      t('dash.status'),
-      t('dash.amount')
-    ]
+    try {
+      const ExcelJS = (await import('exceljs')).default
+      const { saveAs } = (await import('file-saver'))
 
-    const csvContent = [
-      headers.join(','),
-      ...stats.recentOrders.map(order => [
-        order.id,
-        new Date(order.created_at).toLocaleDateString(),
-        `"${order.customer_name || 'N/A'}"`, // Quote to handle commas in names
-        order.status,
-        order.total
-      ].join(','))
-    ].join('\n')
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Sales Report')
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', `sales_report_${timeRange}_${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+      // Define Columns
+      worksheet.columns = [
+        { header: t('dash.order_id'), key: 'id', width: 20 },
+        { header: t('dash.date'), key: 'date', width: 15 },
+        { header: t('dash.customer'), key: 'customer', width: 25 },
+        { header: t('dash.status'), key: 'status', width: 15 },
+        { header: t('dash.amount'), key: 'amount', width: 15 },
+      ]
+
+      // Style Header Row
+      const headerRow = worksheet.getRow(1)
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } }
+      headerRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF7C3AED' } // Primary Purple
+      }
+      headerRow.alignment = { vertical: 'middle', horizontal: 'center' }
+      headerRow.height = 30
+
+      // Add Data
+      stats.recentOrders.forEach(order => {
+        const row = worksheet.addRow({
+          id: order.id.slice(0, 8),
+          date: new Date(order.created_at).toLocaleDateString(),
+          customer: order.customer_name || 'N/A',
+          status: t(`dash.${order.status}`), // Translate status
+          amount: order.total
+        })
+
+        // Style Data Row
+        row.alignment = { vertical: 'middle', horizontal: 'left' }
+        row.getCell('amount').numFmt = '"$"#,##0.00;[Red]\-"$"#,##0.00'
+        row.getCell('status').alignment = { horizontal: 'center' }
+        
+        // Add borders to all cells in the row
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          }
+        })
+      })
+
+      // Generate Buffer and Save
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      saveAs(blob, `Sales_Report_${timeRange}_${new Date().toISOString().split('T')[0]}.xlsx`)
+
+    } catch (error) {
+      console.error('Error exporting Excel:', error)
+      alert('Error generating Excel file')
+    }
   }
 
   const STATS_CONFIG = [

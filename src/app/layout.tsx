@@ -16,8 +16,25 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ThunderXis | Future Fashion",
-  description: "Dystopian Streetwear Store",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://thunderxis.vercel.app'),
+  title: {
+    default: "ThunderXis | Future Fashion",
+    template: "%s | ThunderXis"
+  },
+  description: "Dystopian Streetwear Store. Explore the future of fashion with our exclusive collection.",
+  openGraph: {
+    title: "ThunderXis | Future Fashion",
+    description: "Dystopian Streetwear Store. Explore the future of fashion.",
+    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://thunderxis.vercel.app',
+    siteName: 'ThunderXis',
+    locale: 'es_CO',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ThunderXis | Future Fashion',
+    description: 'Dystopian Streetwear Store',
+  }
 };
 
 export default function RootLayout({

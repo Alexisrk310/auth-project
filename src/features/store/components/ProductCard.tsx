@@ -1,14 +1,15 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { ShoppingCart, Eye, Heart } from 'lucide-react'
+import { ShoppingCart, Eye, Heart, Star } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCartStore, Product } from '@/store/useCartStore'
 import { useLanguage } from '@/components/LanguageProvider'
 import { useToast } from '@/components/ui/Toast'
 import { useFavorites } from '@/hooks/useFavorites'
+import { supabase } from '@/lib/supabase/client'
 
 interface ProductCardProps {
   product: Product & { isNew?: boolean }
@@ -21,6 +22,24 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const { addToast } = useToast()
   const { toggleFavorite, isFavorite } = useFavorites()
   const [selectedSize, setSelectedSize] = useState<string>(product.sizes?.[0] || 'M')
+  const [rating, setRating] = useState<number>(0)
+  const [reviewCount, setReviewCount] = useState<number>(0)
+
+  useEffect(() => {
+    const fetchRating = async () => {
+        const { data } = await supabase
+            .from('reviews')
+            .select('rating')
+            .eq('product_id', product.id)
+        
+        if (data && data.length > 0) {
+            const avg = data.reduce((acc, curr) => acc + curr.rating, 0) / data.length
+            setRating(avg)
+            setReviewCount(data.length)
+        }
+    }
+    fetchRating()
+  }, [product.id])
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -55,7 +74,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
       {/* Sale Badge */}
       {product.sale_price && (
         <div className="absolute top-3 left-3 z-20 bg-gradient-to-r from-red-500 to-pink-600 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full backdrop-blur-md shadow-lg animate-pulse">
-           PROMO
+           {t('product.promo')}
         </div>
       )}
 
@@ -77,6 +96,8 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           src={product.images?.[0] || product.image_url || '/placeholder.png'}
           alt={product.name}
           fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          priority={index < 2}
           className="object-cover transition-transform duration-700 group-hover:scale-110"
         />
         
@@ -125,7 +146,21 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
         <div className="flex justify-between items-start mb-2">
           <div className="flex-1 pr-2">
             <p className="text-xs text-primary font-medium tracking-wider uppercase mb-1">{product.category || 'Streetwear'}</p>
-            <h3 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors line-clamp-1 text-foreground">{product.name}</h3>
+            <h3 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors text-foreground">{product.name}</h3>
+            
+            {/* Rating Stars - Always visible */}
+            <div className="flex items-center gap-1 mt-1">
+                <div className="flex">
+                    {[...Array(5)].map((_, i) => (
+                        <Star 
+                            key={i} 
+                            className={`w-3 h-3 ${i < Math.round(rating) ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground/30'}`} 
+                        />
+                    ))}
+                </div>
+                {reviewCount > 0 && <span className="text-[10px] text-muted-foreground">({reviewCount})</span>}
+            </div>
+            
           </div>
           <div className="flex flex-col items-end shrink-0">
              {product.sale_price ? (

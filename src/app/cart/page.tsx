@@ -91,6 +91,28 @@ export default function CartPage() {
           throw new Error(`DB Error: ${matchError.message} (${matchError.code})`)
       }
 
+      // 1.5 Insert Order Items
+      const orderItemsData = items.map(item => ({
+          order_id: orderId,
+          product_id: item.id,
+          quantity: item.quantity,
+          price: item.price,
+          size: item.size || null,
+          product_name: item.name
+      }))
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItemsData)
+
+      if (itemsError) {
+          console.error('Error inserting items:', itemsError)
+          // Look into reverting order here if strictly transactional, 
+          // or just proceed and rely on Support. 
+          // For now, we log and proceed but maybe warn user?
+          // throw new Error('Failed to save order items') 
+      }
+
       // 2. Create MP Preference linked to Order
       const response = await fetch('/api/checkout', {
         method: 'POST',
@@ -109,8 +131,9 @@ export default function CartPage() {
         addToast(t('checkout.redirecting'), 'success')
         window.location.href = data.url
       } else {
-        console.error('Checkout failed')
-        addToast(t('checkout.init_failed'), 'error')
+        console.error('Checkout failed. Server response:', data)
+        const serverError = data.error || t('checkout.init_failed')
+        addToast(serverError, 'error')
       }
     } catch (error: any) {
       console.error('Full Checkout Error:', JSON.stringify(error, null, 2))
@@ -143,6 +166,7 @@ export default function CartPage() {
                     src={item.image_url} 
                     alt={item.name}
                     fill
+                    sizes="96px"
                     className="object-cover"
                   />
                 </div>
@@ -200,51 +224,51 @@ export default function CartPage() {
                         {t('checkout.shipping')}
                     </h2>
                     <div className="space-y-4">
-                        <div>
-                            <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('checkout.name')}</label>
-                            <input 
-                                type="text" 
-                                value={formData.name}
-                                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                                placeholder="John Doe"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('checkout.address')}</label>
-                            <input 
-                                type="text" 
-                                value={formData.address}
-                                onChange={(e) => setFormData({...formData, address: e.target.value})}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                                placeholder="Calle 123 # 45-67"
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('checkout.city')}</label>
-                                <select 
-                                    value={formData.city}
-                                    onChange={(e) => setFormData({...formData, city: e.target.value})}
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                                >
-                                    <option value="">{t('checkout.select_city')}</option>
-                                    {Object.keys(SHIPPING_RATES).map(city => (
-                                        <option key={city} value={city}>{city}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('checkout.phone')}</label>
+                                <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('checkout.name')}</label>
                                 <input 
-                                    type="tel" 
-                                    value={formData.phone}
-                                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                    type="text" 
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                                    placeholder="300 123 4567"
+                                    placeholder={t('checkout.placeholder_name')}
                                 />
                             </div>
-                        </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('checkout.address')}</label>
+                                <input 
+                                    type="text" 
+                                    value={formData.address}
+                                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                                    placeholder={t('checkout.placeholder_address')}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('checkout.city')}</label>
+                                    <select 
+                                        value={formData.city}
+                                        onChange={(e) => setFormData({...formData, city: e.target.value})}
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                                    >
+                                        <option value="">{t('checkout.select_city')}</option>
+                                        {Object.keys(SHIPPING_RATES).map(city => (
+                                            <option key={city} value={city}>{city}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('checkout.phone')}</label>
+                                    <input 
+                                        type="tel" 
+                                        value={formData.phone}
+                                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                                        placeholder={t('checkout.placeholder_phone')}
+                                    />
+                                </div>
+                            </div>
                     </div>
                 </div>
 

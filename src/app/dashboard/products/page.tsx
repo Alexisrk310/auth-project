@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import { Plus, Pencil, Trash2, Loader2, Search, Upload, X, Image as ImageIcon } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Search, Upload, X, Image as ImageIcon, Star } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import { TableSkeleton } from '@/components/dashboard/skeletons'
+import { useLanguage } from '@/components/LanguageProvider'
 
 interface Product {
   id: string
@@ -21,19 +22,25 @@ interface Product {
   sizes?: string[]
   colors?: string[]
   created_at?: string
+  rating?: number // Legacy
+  reviews?: { rating: number }[]
 }
-
-import { useLanguage } from '@/components/LanguageProvider'
 
 export default function ProductsPage() {
   const { t } = useLanguage()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterCategory, setFilterCategory] = useState('')
+  const [filterStock, setFilterStock] = useState('all')
+  const [filterRating, setFilterRating] = useState('')
+  const [filterMinPrice, setFilterMinPrice] = useState('')
+  const [filterMaxPrice, setFilterMaxPrice] = useState('')
+  const [filterSize, setFilterSize] = useState('')
+
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [uploading, setUploading] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-
+  
   // Form State
   const [formData, setFormData] = useState({
     name: '',
@@ -48,10 +55,11 @@ export default function ProductsPage() {
     colors: [] as string[],
     images: [] as string[]
   })
-
+  
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
-  const [tempColor, setTempColor] = useState('#000000') // State for color picker
+  const [uploading, setUploading] = useState(false)
+  const [tempColor, setTempColor] = useState('#000000')
 
   useEffect(() => {
     fetchProducts()
@@ -62,7 +70,7 @@ export default function ProductsPage() {
       setLoading(true)
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select('*, reviews(rating)')
         .order('created_at', { ascending: false })
       
       if (!error && data) {
@@ -76,17 +84,13 @@ export default function ProductsPage() {
   }
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    setImageFiles(prev => [...prev, ...files])
-    
-    // Create previews
-    files.forEach(file => {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setImagePreviews(prev => [...prev, reader.result as string])
-      }
-      reader.readAsDataURL(file)
-    })
+    if (e.target.files) {
+      const files = Array.from(e.target.files)
+      setImageFiles(prev => [...prev, ...files])
+      
+      const newPreviews = files.map(file => URL.createObjectURL(file))
+      setImagePreviews(prev => [...prev, ...newPreviews])
+    }
   }
 
   const removeImage = (index: number) => {
@@ -95,27 +99,29 @@ export default function ProductsPage() {
   }
 
   const uploadImages = async () => {
-    const uploadedUrls: string[] = []
+    const urls: string[] = []
     
     for (const file of imageFiles) {
       const fileExt = file.name.split('.').pop()
-      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`
+      const fileName = `${Math.random()}.${fileExt}`
       const filePath = `${fileName}`
 
       const { error: uploadError } = await supabase.storage
-        .from('product-images')
+        .from('products')
         .upload(filePath, file)
 
-      if (!uploadError) {
-        const { data } = supabase.storage
-          .from('product-images')
-          .getPublicUrl(filePath)
-        
-        uploadedUrls.push(data.publicUrl)
+      if (uploadError) {
+        throw uploadError
       }
+
+      const { data } = supabase.storage
+        .from('products')
+        .getPublicUrl(filePath)
+        
+      urls.push(data.publicUrl)
     }
     
-    return uploadedUrls
+    return urls
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -123,7 +129,6 @@ export default function ProductsPage() {
     setUploading(true)
     
     try {
-      // Upload new images
       const uploadedImages = await uploadImages()
       const allImages = [...formData.images, ...uploadedImages]
       
@@ -139,40 +144,48 @@ export default function ProductsPage() {
         sizes: formData.sizes,
         colors: formData.colors,
         images: allImages,
-        image_url: allImages[0] || null // Fallback validation for legacy support
+        image_url: allImages[0] || null
       }
-
-      let error;
 
       if (editingProduct) {
-        const { error: updateError } = await supabase.from('products').update(payload).eq('id', editingProduct.id)
-        error = updateError
+        const { error } = await supabase
+          .from('products')
+          .update(payload)
+          .eq('id', editingProduct.id)
+        
+        if (error) throw error
       } else {
-        const { error: insertError } = await supabase.from('products').insert([payload])
-        error = insertError
+        const { error } = await supabase
+          .from('products')
+          .insert(payload)
+        
+        if (error) throw error
       }
-      
-      if (error) throw error;
 
+      await fetchProducts()
       setIsModalOpen(false)
-      fetchProducts()
       resetForm()
     } catch (error: any) {
       console.error('Error saving product:', error)
-      alert(`${t('dash.error_save_product')}: ${error.message || error}`)
+      alert('Error saving product')
     } finally {
       setUploading(false)
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t('dash.delete_confirm'))) return
-    
-    const { error } = await supabase.from('products').delete().eq('id', id)
-    if (!error) {
-      fetchProducts()
-    } else {
-      alert(t('dash.error_delete_product'))
+    if (!confirm(t('dash.confirm_delete'))) return
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      await fetchProducts()
+    } catch (error) {
+      console.error('Error deleting product:', error)
     }
   }
 
@@ -192,6 +205,7 @@ export default function ProductsPage() {
     })
     setImageFiles([])
     setImagePreviews([])
+    setEditingProduct(null)
   }
 
   const openModal = (product: Product | null = null) => {
@@ -216,6 +230,12 @@ export default function ProductsPage() {
     setIsModalOpen(true)
   }
 
+  const getAverageRating = (product: Product) => {
+     if (!product.reviews || product.reviews.length === 0) return 0;
+     const sum = product.reviews.reduce((acc, curr) => acc + curr.rating, 0);
+     return sum / product.reviews.length;
+  }
+
   const toggleSize = (size: string) => {
     setFormData(prev => ({
       ...prev,
@@ -226,241 +246,298 @@ export default function ProductsPage() {
   }
 
   const addColor = (color: string) => {
-    if (color && !formData.colors.includes(color)) {
+    if (!formData.colors.includes(color)) {
       setFormData(prev => ({ ...prev, colors: [...prev.colors, color] }))
     }
   }
 
   const removeColor = (color: string) => {
-    setFormData(prev => ({
-      ...prev,
-      colors: prev.colors.filter(c => c !== color)
-    }))
+    setFormData(prev => ({ ...prev, colors: prev.colors.filter(c => c !== color) }))
   }
 
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.category?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredProducts = products.filter(p => {
+    const avgRating = getAverageRating(p)
+    
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.category?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesCategory = filterCategory ? p.category === filterCategory : true
+    const matchesSize = filterSize ? p.sizes?.includes(filterSize) : true
+    
+    const matchesStock = filterStock === 'all' ? true :
+      filterStock === 'in_stock' ? p.stock > 0 :
+      filterStock === 'low_stock' ? p.stock > 0 && p.stock < 5 :
+      filterStock === 'out_of_stock' ? p.stock === 0 : true
+
+    const matchesRating = filterRating ? avgRating >= parseFloat(filterRating) : true
+
+    const price = p.sale_price || p.price
+    const matchesMinPrice = filterMinPrice ? price >= parseFloat(filterMinPrice) : true
+    const matchesMaxPrice = filterMaxPrice ? price <= parseFloat(filterMaxPrice) : true
+
+    return matchesSearch && matchesCategory && matchesSize && matchesStock && matchesRating && matchesMinPrice && matchesMaxPrice
+  })
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-8">
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('dash.product_management')}</h1>
-          <p className="text-muted-foreground">{t('dash.manage_inventory')}</p>
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+            {t('dash.products_title')}
+          </h1>
+          <p className="text-muted-foreground mt-1">{t('dash.products_desc')}</p>
         </div>
-        <button 
+        <button
           onClick={() => openModal()}
-          className="bg-gradient-to-r from-primary to-purple-600 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/30"
+          className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl hover:opacity-90 transition-all hover:scale-105 shadow-lg shadow-primary/25 font-medium"
         >
-          <Plus className="w-5 h-5" /> {t('dash.add_product')}
+          <Plus className="w-5 h-5" />
+          {t('dash.add_product')}
         </button>
       </div>
 
-      {/* Product List */}
-      <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl overflow-hidden shadow-lg">
-        <div className="p-4 border-b border-border/50">
-          <div className="relative">
+      {/* Filters */}
+      <div className="bg-card border border-border/50 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input 
+            <input
               type="text"
+              placeholder={t('dash.search_placeholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={t('dash.search_products')} 
-              className="w-full bg-background border border-border rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
+          <select 
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="px-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+          >
+            <option value="">{t('dash.all_categories')}</option>
+            <option value="Men">{t('filters.men')}</option>
+            <option value="Women">{t('filters.women')}</option>
+            <option value="Kids">Kids</option>
+            <option value="Accessories">{t('cat.accessories')}</option>
+          </select>
+          <select 
+            value={filterStock}
+            onChange={(e) => setFilterStock(e.target.value)}
+            className="px-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+          >
+            <option value="all">{t('dash.all_stock')}</option>
+            <option value="in_stock">{t('dash.in_stock')}</option>
+            <option value="low_stock">{t('dash.low_stock')}</option>
+            <option value="out_of_stock">{t('dash.out_of_stock')}</option>
+          </select>
+          <select 
+            value={filterRating}
+            onChange={(e) => setFilterRating(e.target.value)}
+            className="px-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+          >
+            <option value="">{t('dash.all_ratings')}</option>
+            <option value="4">4+ {t('dash.stars')}</option>
+            <option value="3">3+ {t('dash.stars')}</option>
+          </select>
         </div>
-        
-        {loading ? (
-          <div className="p-4">
-             <TableSkeleton rows={8} columns={5} />
-          </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="p-12 text-center text-muted-foreground">
-            {searchTerm ? t('dash.no_products') : t('dash.add_first')}
-          </div>
-        ) : (
-          <table className="w-full">
-            <thead className="bg-muted/50 text-xs uppercase text-muted-foreground font-semibold">
-              <tr>
-                <th className="px-6 py-4 text-left">{t('dash.product_name')}</th>
-                <th className="px-6 py-4 text-left">{t('dash.category')}</th>
-                <th className="px-6 py-4 text-left">{t('dash.stock')}</th>
-                <th className="px-6 py-4 text-left">{t('dash.price')}</th>
-                <th className="px-6 py-4 text-right">{t('dash.actions')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/50">
-              {filteredProducts.map((product) => (
-                <tr key={product.id} className="group hover:bg-primary/5 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-lg bg-muted relative overflow-hidden border border-border/50">
-                        {product.images?.[0] && (
-                          <Image src={product.images[0]} alt={product.name} fill className="object-cover" />
-                        )}
-                      </div>
-                      <div>
-                        <span className="font-semibold">{product.name}</span>
-                        {product.is_new && (
-                          <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">NEW</span>
-                        )}
-                        {product.sale_price && product.sale_price < product.price && (
-                           <span className="ml-2 text-xs bg-rose-500/10 text-rose-600 px-2 py-0.5 rounded-full font-bold border border-rose-200">
-                             -{Math.round(((product.price - product.sale_price) / product.price) * 100)}%
-                           </span>
-                        )}
-                        <p className="text-xs text-muted-foreground capitalize">{product.gender}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm">{product.category}</td>
-                  <td className="px-6 py-4 text-sm">
-                    <span className={`font-medium ${product.stock && product.stock > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                      {product.stock || 0}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm font-bold">
-                    {product.sale_price && product.sale_price < product.price ? (
-                        <div className="flex flex-col">
-                            <span className="text-rose-600">${product.sale_price.toLocaleString('es-CO')}</span>
-                            <span className="text-xs text-muted-foreground line-through font-normal">${product.price.toLocaleString('es-CO')}</span>
-                        </div>
-                    ) : (
-                        <span>${product.price.toLocaleString('es-CO')}</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button 
-                        onClick={() => openModal(product)} 
-                        className="p-2 hover:bg-primary/10 rounded-lg transition-all"
-                      >
-                        <Pencil className="w-4 h-4 text-primary" />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(product.id)} 
-                        className="p-2 hover:bg-red-500/10 rounded-lg transition-all"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
       </div>
 
-      {/* Enhanced Modal */}
+      {/* Table */}
+      {loading ? (
+        <TableSkeleton />
+      ) : (
+        <div className="bg-card border border-border/50 rounded-2xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-muted/50 border-b border-border">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-muted-foreground">{t('dash.product')}</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-muted-foreground">{t('dash.category')}</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-muted-foreground">{t('dash.price')}</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-muted-foreground">{t('dash.stock')}</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase text-muted-foreground">{t('dash.rating')}</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold uppercase text-muted-foreground">{t('dash.actions')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {filteredProducts.map((product) => (
+                  <tr key={product.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
+                        <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-muted">
+                          {product.images[0] ? (
+                            <Image src={product.images[0]} alt={product.name} fill className="object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                              <ImageIcon className="w-5 h-5" />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-semibold">{product.name}</p>
+                          <p className="text-xs text-muted-foreground truncate max-w-[150px]">{product.description}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm">{product.category}</td>
+                    <td className="px-6 py-4 text-sm font-medium">
+                      ${product.price}
+                    </td>
+                    <td className="px-6 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            product.stock === 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                            product.stock < 5 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                            'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        }`}>
+                            {product.stock}
+                        </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                        {(() => {
+                            const avg = getAverageRating(product);
+                            return avg > 0 ? (
+                                <div className="flex items-center gap-1.5">
+                                    <span className="font-bold">{avg.toFixed(1)}</span>
+                                    <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                                    <span className="text-[10px] text-muted-foreground">({product.reviews?.length})</span>
+                                </div>
+                            ) : (
+                                <span className="text-muted-foreground">-</span>
+                            )
+                        })()}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => openModal(product)}
+                          className="p-2 hover:bg-background rounded-lg text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(product.id)}
+                          className="p-2 hover:bg-background rounded-lg text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-card border border-border/50 rounded-2xl w-full max-w-3xl shadow-2xl max-h-[90vh] overflow-y-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsModalOpen(false)}
+              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+            />
+            
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-2xl bg-card border border-border shadow-xl rounded-2xl overflow-hidden flex flex-col max-h-[90vh]"
             >
-              {/* Header */}
-              <div className="sticky top-0 bg-card/95 backdrop-blur-sm border-b border-border/50 p-6 flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-black">{editingProduct ? t('dash.edit_product') : t('dash.new_product')}</h2>
-                  <p className="text-sm text-muted-foreground">{t('dash.product_details')}</p>
-                </div>
-                <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-muted rounded-lg">
+              <div className="flex items-center justify-between p-6 border-b border-border">
+                <h2 className="text-xl font-bold">
+                  {editingProduct ? t('dash.edit_product') : t('dash.add_product')}
+                </h2>
+                <button 
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-2 hover:bg-muted rounded-full transition-colors"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
+                
                 {/* Basic Info */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">{t('dash.product_name')} *</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-semibold mb-2">{t('dash.product_name')}</label>
                     <input 
-                      required 
+                      type="text" 
+                      required
                       className="w-full bg-background border border-border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50" 
                       value={formData.name} 
                       onChange={e => setFormData({...formData, name: e.target.value})} 
                       placeholder={t('dash.product_name')}
                     />
                   </div>
-                </div>
-                {/* Price & Sale Price */}
-                <div className="grid md:grid-cols-2 gap-4">
+                  
                   <div>
-                    <label className="block text-sm font-semibold mb-2">{t('dash.price')} *</label>
-                    <input 
-                      required 
-                      type="number" 
-                      step="0.01" 
-                      className="w-full bg-background border border-border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50" 
-                      value={formData.price} 
-                      onChange={e => setFormData({...formData, price: e.target.value})} 
-                      placeholder="0.00"
-                    />
+                    <label className="block text-sm font-semibold mb-2">{t('dash.price')}</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <input 
+                        type="number" 
+                        required
+                        className="w-full bg-background border border-border rounded-xl pl-8 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50" 
+                        value={formData.price} 
+                        onChange={e => setFormData({...formData, price: e.target.value})} 
+                        placeholder="0.00"
+                      />
+                    </div>
                   </div>
+
                   <div>
-                    <label className="block text-sm font-semibold mb-2 text-red-400">{t('dash.sale_price_label')}</label>
-                    <input 
-                      type="number" 
-                      step="0.01" 
-                      className="w-full bg-background border border-red-500/30 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-500/50" 
-                      value={formData.sale_price || ''} 
-                      onChange={e => setFormData({...formData, sale_price: e.target.value})} 
-                      placeholder={t('dash.sale_price_placeholder')}
-                    />
+                    <label className="block text-sm font-semibold mb-2">{t('dash.sale_price')}</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <input 
+                        type="number" 
+                        className="w-full bg-background border border-border rounded-xl pl-8 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50" 
+                        value={formData.sale_price} 
+                        onChange={e => setFormData({...formData, sale_price: e.target.value})} 
+                        placeholder="0.00"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Category, Stock, Gender */}
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold mb-2">{t('dash.category')}</label>
                     <select 
+                      required
                       className="w-full bg-background border border-border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50" 
                       value={formData.category} 
-                      onChange={e => setFormData({...formData, category: e.target.value})}
+                      onChange={e => setFormData({...formData, category: e.target.value})} 
                     >
                       <option value="">{t('dash.select_category')}</option>
-                      <option value="Hoodies">Hoodies</option>
-                      <option value="T-Shirts">T-Shirts</option>
-                      <option value="Pants">Pants</option>
-                      <option value="Accessories">Accessories</option>
-                      <option value="Caps">Caps</option>
-                      <option value="Footwear">Footwear</option>
-                      <option value="Jackets">Jackets</option>
+                      <option value="Men">{t('filters.men')}</option>
+                      <option value="Women">{t('filters.women')}</option>
+                      <option value="Kids">Kids</option>
+                      <option value="Accessories">{t('cat.accessories')}</option>
                     </select>
                   </div>
+
                   <div>
                     <label className="block text-sm font-semibold mb-2">{t('dash.stock')}</label>
                     <input 
                       type="number" 
+                      required
                       className="w-full bg-background border border-border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50" 
                       value={formData.stock} 
                       onChange={e => setFormData({...formData, stock: e.target.value})} 
                       placeholder="0"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">{t('dash.gender')}</label>
-                    <select 
-                      className="w-full bg-background border border-border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50" 
-                      value={formData.gender} 
-                      onChange={e => setFormData({...formData, gender: e.target.value as any})}
-                    >
-                      <option value="unisex">Unisex</option>
-                      <option value="men">Men</option>
-                      <option value="women">Women</option>
-                    </select>
-                  </div>
                 </div>
-
-                {/* Description */}
+                
+                 {/* Description */}
                 <div>
                   <label className="block text-sm font-semibold mb-2">{t('dash.desc')}</label>
                   <textarea 
@@ -516,12 +593,11 @@ export default function ProductsPage() {
                             onClick={() => setFormData({...formData, colors: []})}
                             className="ml-auto text-xs text-red-500 hover:text-red-400 underline"
                         >
-                            Clear All ({formData.colors.length})
+                            {t('dash.clear_colors')} ({formData.colors.length})
                         </button>
                     )}
                   </div>
                   
-                  {/* SCROLLABLE CONTAINER FIX */}
                   <div className="flex gap-2 flex-wrap max-h-[120px] overflow-y-auto p-2 border border-border/30 rounded-xl bg-muted/10">
                     {formData.colors.map((color, i) => (
                       <div key={i} className="relative group shrink-0">

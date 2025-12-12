@@ -11,6 +11,7 @@ import { useFavorites } from '@/hooks/useFavorites'
 import { useToast } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase/client'
 import Image from 'next/image'
+import ReviewsList from '@/components/reviews/ReviewsList'
 
 export default function ProductDetailsPage() {
   const { id } = useParams()
@@ -228,6 +229,11 @@ export default function ProductDetailsPage() {
                 </div>
 
             </motion.div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="mt-20 border-t border-border pt-12">
+            <ReviewsList productId={product!.id} />
         </div>
 
       </div>

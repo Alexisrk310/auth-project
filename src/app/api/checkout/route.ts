@@ -10,11 +10,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No items in cart' }, { status: 400 });
     }
 
+    if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+       console.error("Missing MERCADO_PAGO_ACCESS_TOKEN")
+       return NextResponse.json({ error: 'Server Config Error: Missing MP Token' }, { status: 500 });
+    }
+
     const preference = await createPreference(items, orderId);
     
     return NextResponse.json({ url: preference.init_point });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Mercado Pago Error:', error);
-    return NextResponse.json({ error: 'Payment initialization failed' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Payment initialization failed', details: error }, { status: 500 });
   }
 }

@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useLanguage } from '@/components/LanguageProvider'
-import { Search, Truck, CheckCircle, Clock, AlertCircle, Loader2, Package } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Search, Truck, CheckCircle, Clock, AlertCircle, Loader2, Package, X, AlertTriangle } from 'lucide-react'
 import { OrderCardSkeleton } from '@/components/dashboard/skeletons'
 
 interface Order {
@@ -25,6 +26,9 @@ export default function DashboardOrders() {
   const [filter, setFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [updatingOrder, setUpdatingOrder] = useState<string | null>(null)
+  
+  // Confirmation Modal State
+  const [confirmData, setConfirmData] = useState<{ id: string, status: string } | null>(null)
 
   useEffect(() => {
     fetchOrders()
@@ -47,13 +51,22 @@ export default function DashboardOrders() {
     }
   }
 
-  const updateOrderStatus = async (orderId: string, newStatus: string) => {
-    setUpdatingOrder(orderId)
+  const initiateUpdate = (orderId: string, newStatus: string) => {
+    setConfirmData({ id: orderId, status: newStatus })
+  }
+
+  const performUpdate = async () => {
+    if (!confirmData) return
+    
+    const { id, status } = confirmData
+    setUpdatingOrder(id)
+    setConfirmData(null) // Close modal immediately
+
     try {
       const { error } = await supabase
         .from('orders')
-        .update({ status: newStatus })
-        .eq('id', orderId)
+        .update({ status: status })
+        .eq('id', id)
 
       if (!error) {
         await fetchOrders()
@@ -103,10 +116,8 @@ export default function DashboardOrders() {
     return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(amount)
   }
 
-
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6 border-b border-border">
         <div>
@@ -179,14 +190,14 @@ export default function DashboardOrders() {
                       <h3 className="font-bold text-lg font-mono text-primary">#{order.id.slice(0, 8)}</h3>
                       <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(order.status)}`}>
                         <StatusIcon className="w-3.5 h-3.5" />
-                        <span className="capitalize">{order.status}</span>
+                        <span className="capitalize">{t(`dash.${order.status}`)}</span>
                       </div>
                     </div>
                     
                     <div className="grid md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-foreground">{t('dash.customer_label')}</span>
-                        <span className="text-muted-foreground">{order.customer_name || 'N/A'}</span>
+                        <span className="text-muted-foreground">{order.customer_name || t('dash.na')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-foreground">{t('dash.date_label')}</span>
@@ -200,15 +211,15 @@ export default function DashboardOrders() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-foreground">{t('dash.phone_label')}</span>
-                        <span className="text-muted-foreground">{order.phone || 'N/A'}</span>
+                        <span className="text-muted-foreground">{order.phone || t('dash.na')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-foreground">{t('dash.city_label')}</span>
-                        <span className="text-muted-foreground">{order.city || 'N/A'}</span>
+                        <span className="text-muted-foreground">{order.city || t('dash.na')}</span>
                       </div>
                       <div className="col-span-1 md:col-span-2 flex items-center gap-2">
                         <span className="font-semibold text-foreground">{t('dash.address_label')}</span>
-                        <span className="text-muted-foreground">{order.shipping_address || 'N/A'}</span>
+                        <span className="text-muted-foreground">{order.shipping_address || t('dash.na')}</span>
                       </div>
                     </div>
                   </div>
@@ -227,7 +238,7 @@ export default function DashboardOrders() {
                       <>
                         {order.status === 'pending' && (
                           <button 
-                            onClick={() => updateOrderStatus(order.id, 'paid')}
+                            onClick={() => initiateUpdate(order.id, 'paid')}
                             className="w-full bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                           >
                             <Package className="w-4 h-4" /> {t('dash.mark_paid')}
@@ -235,7 +246,7 @@ export default function DashboardOrders() {
                         )}
                         {order.status === 'paid' && (
                           <button 
-                            onClick={() => updateOrderStatus(order.id, 'shipped')}
+                            onClick={() => initiateUpdate(order.id, 'shipped')}
                             className="w-full bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
                           >
                             <Truck className="w-4 h-4" /> {t('dash.ship_order')}
@@ -243,7 +254,7 @@ export default function DashboardOrders() {
                         )}
                         {order.status === 'shipped' && (
                           <button 
-                            onClick={() => updateOrderStatus(order.id, 'delivered')}
+                            onClick={() => initiateUpdate(order.id, 'delivered')}
                             className="w-full bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
                           >
                             <CheckCircle className="w-4 h-4" /> {t('dash.mark_delivered')}
@@ -258,6 +269,45 @@ export default function DashboardOrders() {
           })}
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {confirmData && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }} 
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="bg-card w-full max-w-md rounded-2xl shadow-xl overflow-hidden border border-border"
+                >
+                    <div className="p-6">
+                        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4 mx-auto">
+                            <AlertTriangle className="w-6 h-6 text-primary" />
+                        </div>
+                        <h3 className="text-xl font-bold text-center mb-2">{t('dash.confirm_status_title')}</h3>
+                        <p className="text-muted-foreground text-center mb-6">
+                            {t('dash.confirm_status_desc').replace('{status}', t(`dash.${confirmData.status}`))}
+                        </p>
+                        
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setConfirmData(null)}
+                                className="flex-1 py-2.5 rounded-xl border border-border font-semibold hover:bg-muted transition-colors"
+                            >
+                                {t('dash.cancel')}
+                            </button>
+                            <button 
+                                onClick={performUpdate}
+                                className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold hover:opacity-90 transition-opacity"
+                            >
+                                {t('dash.confirm_btn')}
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

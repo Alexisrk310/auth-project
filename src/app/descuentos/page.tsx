@@ -63,7 +63,7 @@ export default function DiscountsPage() {
                     
                     {maxDiscount > 0 && (
                         <p className="text-2xl font-bold text-primary max-w-2xl mx-auto leading-relaxed uppercase tracking-wider">
-                           Hasta {maxDiscount}% OFF
+                           {t('promos.upto_off').replace('{0}', maxDiscount.toString())}
                         </p>
                     )}
                 </motion.div>

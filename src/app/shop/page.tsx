@@ -5,6 +5,7 @@ import React, { useState, useMemo, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
 import ProductCard from '@/features/store/components/ProductCard'
+import { ProductSkeleton } from '@/features/store/components/ProductSkeleton'
 import { useLanguage } from '@/components/LanguageProvider'
 import { Filter, X } from 'lucide-react'
 
@@ -119,10 +120,11 @@ function ShopContent() {
                   </div>
                </div>
                
+
                {loading ? (
-                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
                         {[...Array(6)].map((_, i) => (
-                            <div key={i} className="aspect-[3/4] bg-muted/20 animate-pulse rounded-2xl" />
+                            <ProductSkeleton key={i} />
                         ))}
                    </div>
                ) : products.length === 0 ? (
