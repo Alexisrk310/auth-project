@@ -145,18 +145,23 @@ export default function CartPage() {
           order_id: orderId,
           product_id: item.id,
           quantity: item.quantity,
-          price: item.price,
-          size: item.size || null,
-          product_name: item.name
+          price_at_time: item.price
       }))
 
-      const { error: itemsError } = await supabase
+      console.log('Inserting order items:', JSON.stringify(orderItemsData, null, 2))
+
+      const { data: insertedItems, error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItemsData)
+        .select()
 
       if (itemsError) {
           console.error('Error inserting items:', itemsError)
+          console.error('Error details:', JSON.stringify(itemsError, null, 2))
+          throw new Error(`Failed to save order items: ${itemsError.message}`)
       }
+
+      console.log('Order items inserted successfully:', insertedItems)
 
       // 2. Create MP Preference linked to Order
       const response = await fetch('/api/checkout', {
