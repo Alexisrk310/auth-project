@@ -11,7 +11,7 @@ import {
     ChevronRight, Sparkles, AlertCircle, Key, Mail 
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { SHIPPING_RATES } from '@/app/cart/page'
+import { SHIPPING_RATES } from '@/config/shipping'
 import { useToast } from '@/components/ui/Toast'
 
 interface Address {
