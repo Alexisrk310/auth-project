@@ -25,7 +25,6 @@ interface Order {
 export default function MyOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
-  const [debugError, setDebugError] = useState<string | null>(null) // New Debug State
   const { user } = useAuth()
   const { t } = useLanguage()
   const { addToast } = useToast()
@@ -53,22 +52,16 @@ export default function MyOrdersPage() {
   useEffect(() => {
     const loadData = async () => {
         setLoading(true)
-        setDebugError(null)
         try {
             let localGuestIds = JSON.parse(localStorage.getItem('guest_orders') || '[]')
-            console.log('DEBUG: localGuestIds found:', localGuestIds)
             
             // 0. Auto-Link if User Logged In
             if (user && localGuestIds.length > 0) {
-                 console.log('DEBUG: Linking guest orders to user...')
                  const linkResult = await linkGuestOrders(user.id, localGuestIds)
                  if (linkResult.success) {
-                     console.log(`DEBUG: Linked ${linkResult.count} orders. Clearing local guest storage.`)
                      localStorage.removeItem('guest_orders')
                      localGuestIds = [] // Treat as empty now
                      addToast(t('my_orders.orders_linked'), 'success')
-                 } else {
-                     console.error('DEBUG: Link Error:', linkResult.error)
                  }
             }
 
@@ -77,14 +70,9 @@ export default function MyOrdersPage() {
             if (localGuestIds.length > 0) {
                 // Now returns object { orders, error }
                 const result = await fetchGuestOrders(localGuestIds)
-                if (result.error) {
-                    console.error('DEBUG: Server Error:', result.error)
-                    setDebugError(result.error)
+                if (result.orders) {
+                    fetchedGuestOrders = result.orders
                 }
-                fetchedGuestOrders = result.orders || []
-                console.log('DEBUG: fetchedGuestOrders result:', fetchedGuestOrders)
-            } else {
-                console.log('DEBUG: No local guest IDs found (or cleared after linking).')
             }
 
             // ... (rest of logic same) ...
@@ -509,13 +497,6 @@ export default function MyOrdersPage() {
                 </motion.div>
             )}
         </AnimatePresence>
-        {/* Debug Section - Temporary */}
-        <div className="mt-12 p-4 bg-black/5 rounded-lg text-xs font-mono text-muted-foreground border border-border">
-            <p className="font-bold mb-2">Debug Info (Take screenshot if empty):</p>
-            <p>Guest IDs in Storage: {typeof window !== 'undefined' ? localStorage.getItem('guest_orders') : 'N/A'}</p>
-            <p>Orders Fetched: {orders.length}</p>
-            <p>User ID: {user?.id || 'Guest'}</p>
-        </div>
       </div>
     </div>
   )

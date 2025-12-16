@@ -9,6 +9,7 @@ import {
 } from 'recharts'
 import { DollarSign, ShoppingBag, Users as UsersIcon, TrendingUp, Download, Loader2, Calendar } from 'lucide-react'
 import { StatsCardSkeleton, ChartSkeleton, TableSkeleton } from '@/components/dashboard/skeletons'
+import { InventoryAlerts } from '@/components/dashboard/InventoryAlerts'
 
 interface Order {
   id: string
@@ -32,6 +33,7 @@ export default function DashboardOverview() {
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
   const [loading, setLoading] = useState(true)
+  const [inventoryAlerts, setInventoryAlerts] = useState<{ lowStock: any[], outOfStock: any[] }>({ lowStock: [], outOfStock: [] })
   const [stats, setStats] = useState<DashboardStats>({
     totalSales: 0,
     totalOrders: 0,
@@ -39,6 +41,18 @@ export default function DashboardOverview() {
     salesData: [],
     recentOrders: []
   })
+
+  useEffect(() => {
+    const loadAlerts = async () => {
+        const { getInventoryAlerts } = await import('./analytics-action')
+        const alerts = await getInventoryAlerts()
+        setInventoryAlerts({
+          lowStock: alerts.lowStock || [],
+          outOfStock: alerts.outOfStock || []
+        })
+    }
+    loadAlerts()
+  }, [])
 
   useEffect(() => {
     if (timeRange !== 'Custom' || (customStartDate && customEndDate)) {
@@ -49,65 +63,23 @@ export default function DashboardOverview() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
+      const { getAnalyticsData } = await import('./analytics-action')
       
-      const now = new Date()
-      let startDate: Date
-      let endDate: Date = now // Default to now
-
-      if (timeRange === 'Custom' && customStartDate && customEndDate) {
-        startDate = new Date(customStartDate)
-        // Set end date to end of the selected day
-        const end = new Date(customEndDate)
-        end.setHours(23, 59, 59, 999)
-        endDate = end
-      } else {
-        const daysToFetch = timeRange === 'Daily' ? 1 : timeRange === 'Weekly' ? 7 : 30
-        startDate = new Date(now.getTime() - daysToFetch * 24 * 60 * 60 * 1000)
+      const rangeMap: Record<string, '7d' | '30d' | '90d'> = {
+          'Daily': '7d',
+          'Weekly': '7d',
+          'Monthly': '30d'
       }
-
-      const { data: orders, error: ordersError } = await supabase
-        .from('orders')
-        .select('*')
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString())
-        // Filter for valid "paid" statuses
-        .in('status', ['approved', 'paid', 'shipped', 'delivered', 'completed'])
-        .order('created_at', { ascending: false })
-
-      if (ordersError) throw ordersError
-
-      const totalSales = orders?.reduce((sum, order) => sum + parseFloat(order.total?.toString() || '0'), 0) || 0
-      const totalOrders = orders?.length || 0
-      const uniqueCustomers = new Set(orders?.map(o => o.user_id)).size
-
-      const salesByDay = new Map<string, { sales: number; orders: number }>()
       
-      orders?.forEach(order => {
-        const date = new Date(order.created_at)
-        const dayKey = timeRange === 'Daily' 
-          ? date.toLocaleTimeString('en', { hour: '2-digit' })
-          : date.toLocaleDateString('en', { weekday: 'short' })
-        
-        const existing = salesByDay.get(dayKey) || { sales: 0, orders: 0 }
-        salesByDay.set(dayKey, {
-          sales: existing.sales + parseFloat(order.total?.toString() || '0'),
-          orders: existing.orders + 1
-        })
-      })
-
-      const salesData = Array.from(salesByDay.entries()).map(([name, data]) => ({
-        name,
-        ...data
-      }))
-
-      const recentOrders = orders?.slice(0, 5) || []
+      const range = rangeMap[timeRange] || '30d'
+      const { data, stats: newStats, recentOrders } = await getAnalyticsData(range)
 
       setStats({
-        totalSales,
-        totalOrders,
-        newCustomers: uniqueCustomers,
-        salesData: salesData.length > 0 ? salesData : [{ name: t('dash.no_data'), sales: 0, orders: 0 }],
-        recentOrders
+        totalSales: newStats.totalSales,
+        totalOrders: newStats.totalOrders,
+        newCustomers: newStats.newCustomers || 0,
+        salesData: data.map((d: any) => ({ name: d.date, sales: d.sales, orders: d.orders })),
+        recentOrders: (recentOrders as Order[]) || []
       })
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -186,7 +158,7 @@ export default function DashboardOverview() {
 
     } catch (error) {
       console.error('Error exporting Excel:', error)
-      alert('Error generating Excel file')
+      alert(t('dash.error_export'))
     }
   }
 
@@ -196,8 +168,6 @@ export default function DashboardOverview() {
     { label: t('dash.customers'), value: stats.newCustomers.toString(), icon: UsersIcon, color: 'text-purple-600', bg: 'bg-purple-50', iconBg: 'bg-purple-100' },
     { label: t('dash.avg_order'), value: stats.totalOrders > 0 ? formatCurrency(stats.totalSales / stats.totalOrders) : '$0', icon: TrendingUp, color: 'text-orange-600', bg: 'bg-orange-50', iconBg: 'bg-orange-100' },
   ]
-
-
 
   return (
     <div className="space-y-6">
@@ -256,6 +226,8 @@ export default function DashboardOverview() {
           </div>
         </div>
       </div>
+
+      <InventoryAlerts lowStock={inventoryAlerts.lowStock} outOfStock={inventoryAlerts.outOfStock} />
 
       {/* Clean Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -325,9 +297,9 @@ export default function DashboardOverview() {
                         padding: '8px 12px',
                         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                       }}
-                      itemStyle={{ color: '#8b5cf6', fontWeight: '600', fontSize: '14px' }}
+                       itemStyle={{ color: '#8b5cf6', fontWeight: '600', fontSize: '14px' }}
                       labelStyle={{ color: '#6b7280', fontWeight: '600', fontSize: '12px' }}
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value: any) => formatCurrency(Number(value))}
                     />
                     <Area 
                       type="monotone" 

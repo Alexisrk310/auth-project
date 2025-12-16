@@ -14,12 +14,38 @@ import { v4 as uuidv4 } from 'uuid'
 import { SHIPPING_RATES, DEFAULT_SHIPPING_COST } from '@/config/shipping'
 
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, total, isLoading } = useCartStore()
+  const { items, removeItem, updateQuantity, total, isLoading, coupon, applyCoupon, removeCoupon } = useCartStore()
   const { t } = useLanguage()
   const { user } = useAuth()
   const { addToast } = useToast()
   
   const [loading, setLoading] = useState(false)
+  const [couponInput, setCouponInput] = useState('')
+  const [validatingCoupon, setValidatingCoupon] = useState(false)
+
+  const handleApplyCoupon = async () => {
+      if (!couponInput) return
+      setValidatingCoupon(true)
+      try {
+          const { validateCoupon } = await import('../coupon-actions')
+          const res = await validateCoupon(couponInput, total())
+          
+          if (res.error) {
+              addToast(res.error, 'error')
+          } else if (res.success && res.coupon) {
+              applyCoupon(res.coupon)
+              addToast('Coupon applied!', 'success')
+              setCouponInput('')
+          }
+      } catch (error) {
+          console.error(error)
+          addToast(t('cart.error_prefix'), 'error')
+      } finally {
+          setValidatingCoupon(false)
+      }
+  }
+
+  const formatCurrency = (val: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(val)
 
   // ... (shipping form state) ...
   const [formData, setFormData] = useState({
@@ -126,7 +152,9 @@ export default function CartPage() {
             city: formData.city,
             phone: formData.phone,
             shipping_cost: shippingCost,
-            language: t('lang_code') || 'es'
+            language: t('lang_code') || 'es',
+            coupon_code: coupon ? coupon.code : null,
+            discount_amount: coupon ? coupon.applied_discount : 0
         })
 
       if (matchError) {
@@ -165,7 +193,12 @@ export default function CartPage() {
 
       console.log('Order items inserted successfully:', insertedItems)
 
+      console.log('Order items inserted successfully:', insertedItems)
+
       // 2. Create MP Preference linked to Order
+      // Include coupon code if applied
+      const couponCode = useCartStore.getState().coupon?.code
+
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: {
@@ -173,7 +206,8 @@ export default function CartPage() {
         },
         body: JSON.stringify({ 
             items: [...items, { id: 'shipping', name: t('cart.shipping_item_name'), price: shippingCost, quantity: 1 }],
-            orderId 
+            orderId,
+            couponCode // Send coupon code
         }),
       })
       
@@ -359,10 +393,51 @@ export default function CartPage() {
                             }
                         </span>
                         </div>
+                        {coupon && (
+                            <div className="flex justify-between text-green-600 font-medium">
+                                <span>{t('checkout.discount')} ({coupon.code})</span>
+                                <span>-{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(coupon.applied_discount)}</span>
+                            </div>
+                        )}
                         <div className="border-t border-border/50 pt-4 flex justify-between font-bold text-xl">
                         <span>{t('checkout.total')}</span>
-                        <span>{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(total() + shippingCost)}</span>
+                        <span>{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(total() + shippingCost - (coupon?.applied_discount || 0))}</span>
                         </div>
+                    </div>
+
+                    {/* Coupon Input */}
+                    <div className="mb-6">
+                        {!coupon ? (
+                            <div className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    value={couponInput}
+                                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                                    placeholder={t('checkout.coupon_placeholder') || 'Promo Code'}
+                                    className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none uppercase font-mono"
+                                />
+                                <button 
+                                    onClick={handleApplyCoupon}
+                                    disabled={validatingCoupon || !couponInput}
+                                    className="bg-muted text-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted/80 disabled:opacity-50"
+                                >
+                                    {validatingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : (t('checkout.apply') || 'Apply')}
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 flex justify-between items-center">
+                                <div>
+                                    <span className="text-green-600 font-bold font-mono text-sm">{coupon.code}</span>
+                                    <span className="text-green-600/80 text-xs block">-{formatCurrency(coupon.applied_discount)} applied</span>
+                                </div>
+                                <button 
+                                    onClick={removeCoupon}
+                                    className="text-red-400 hover:text-red-500 p-1"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     <button

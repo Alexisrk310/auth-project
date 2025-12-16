@@ -203,7 +203,7 @@ export default function ProductsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t('dash.delete_confirm'))) return
+    if (!confirm(t('dash.confirm_delete'))) return
 
     try {
       const { error } = await supabase
@@ -439,7 +439,7 @@ export default function ProductsPage() {
                                       <span className="text-[10px] text-muted-foreground">({product.reviews?.length})</span>
                                   </div>
                               ) : (
-                                  <span className="text-muted-foreground">-</span>
+                                  <span className="text-muted-foreground">{t('dash.no_reviews')}</span>
                               )
                           })()}
                       </td>
@@ -508,7 +508,7 @@ export default function ProductsPage() {
                         product.stock < 5 ? 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-900' :
                         'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900'
                     }`}>
-                        {product.stock} stock
+                        {product.stock} {t('dash.stock_suffix')}
                     </span>
                   </div>
                 </div>

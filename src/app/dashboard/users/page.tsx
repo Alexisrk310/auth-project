@@ -145,13 +145,13 @@ export default function DashboardUsers() {
 
     // Styling
     worksheet.columns = [
-      { header: 'Email', key: 'email', width: 30 },
-      { header: 'Name', key: 'full_name', width: 25 },
-      { header: 'Role', key: 'role', width: 10 },
-      { header: 'Spent', key: 'totalSpent', width: 15 },
-      { header: 'Orders', key: 'orderCount', width: 10 },
-      { header: 'Last Active', key: 'lastActive', width: 20 },
-      { header: 'Joined', key: 'created_at', width: 20 },
+      { header: t('dash.excel_email'), key: 'email', width: 30 },
+      { header: t('dash.excel_name'), key: 'full_name', width: 25 },
+      { header: t('dash.excel_role'), key: 'role', width: 10 },
+      { header: t('dash.excel_spent'), key: 'totalSpent', width: 15 },
+      { header: t('dash.excel_orders'), key: 'orderCount', width: 10 },
+      { header: t('dash.excel_last_active'), key: 'lastActive', width: 20 },
+      { header: t('dash.excel_joined'), key: 'created_at', width: 20 },
     ]
 
     // Style Header

@@ -323,7 +323,7 @@ export default function DashboardReviewsPage() {
                     </div>
                     <form onSubmit={handleAddReview} className="p-5 space-y-4">
                         <div>
-                            <label className="text-xs font-bold mb-1.5 block uppercase text-muted-foreground">Product</label>
+                            <label className="text-xs font-bold mb-1.5 block uppercase text-muted-foreground">{t('dash.product')}</label>
                             <select 
                                 className="w-full bg-background border border-border rounded-xl p-3 text-sm focus:ring-2 ring-primary/20 outline-none"
                                 value={newReview.product_id}
@@ -335,7 +335,7 @@ export default function DashboardReviewsPage() {
                             </select>
                         </div>
                         <div>
-                            <label className="text-xs font-bold mb-1.5 block uppercase text-muted-foreground">Rating</label>
+                            <label className="text-xs font-bold mb-1.5 block uppercase text-muted-foreground">{t('dash.rating')}</label>
                             <div className="flex gap-2 bg-muted/30 p-2 rounded-xl w-fit">
                                 {[1,2,3,4,5].map(star => (
                                     <button 
@@ -403,13 +403,13 @@ export default function DashboardReviewsPage() {
                                 onClick={() => setDeleteData(null)}
                                 className="flex-1 py-3 bg-muted hover:bg-muted/80 text-foreground font-bold rounded-xl transition-colors"
                             >
-                                {t('common.cancel') || 'Cancel'}
+                                {t('dash.cancel')}
                             </button>
                             <button 
                                 onClick={confirmDelete}
                                 className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors shadow-lg shadow-red-500/20"
                             >
-                                {t('common.delete') || 'Delete'}
+                                {t('reviews.delete')}
                             </button>
                         </div>
                     </div>

@@ -28,9 +28,12 @@ interface CartState {
     items: CartItem[]
     isOpen: boolean
     isLoading: boolean
+    coupon: { code: string, discount_value: number, discount_type: 'percentage' | 'fixed', applied_discount: number } | null
     addItem: (product: Product & { size?: string, quantity?: number }) => Promise<boolean>
     removeItem: (productId: string, size?: string) => Promise<void>
     updateQuantity: (productId: string, quantity: number, size?: string) => Promise<void>
+    applyCoupon: (coupon: any) => void
+    removeCoupon: () => void
     clearCart: () => Promise<void>
     toggleCart: () => void
     fetchCart: () => Promise<void>
@@ -44,6 +47,11 @@ export const useCartStore = create<CartState>()(
             items: [],
             isOpen: false,
             isLoading: false,
+            coupon: null,
+
+            applyCoupon: (coupon) => set({ coupon }),
+            removeCoupon: () => set({ coupon: null }),
+
 
             fetchCart: async () => {
                 const { cartId } = get()

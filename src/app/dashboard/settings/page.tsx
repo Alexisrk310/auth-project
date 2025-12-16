@@ -1,12 +1,14 @@
 'use client'
 
 import { useStoreConfig } from '@/store/useStoreConfig'
+import { useLanguage } from '@/components/LanguageProvider'
 import { motion } from 'framer-motion'
 import { Save } from 'lucide-react'
 import { useState } from 'react'
 
 export default function SettingsPage() {
   const { storeName, storeType, setStoreName, setStoreType } = useStoreConfig()
+  const { t } = useLanguage()
   const [localName, setLocalName] = useState(storeName)
   const [loading, setLoading] = useState(false)
 
@@ -22,18 +24,18 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">Manage your store configuration.</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t('dash.settings_title')}</h1>
+        <p className="text-muted-foreground">{t('dash.settings_desc')}</p>
       </div>
 
       <div className="space-y-8">
         {/* General Settings */}
         <section className="bg-card border border-border/50 rounded-2xl p-6">
-          <h2 className="text-xl font-semibold mb-4">General Configuration</h2>
+          <h2 className="text-xl font-semibold mb-4">{t('dash.settings_general')}</h2>
           
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Store Name</label>
+              <label className="text-sm font-medium">{t('dash.store_name')}</label>
               <input 
                 type="text" 
                 value={localName}
@@ -44,7 +46,7 @@ export default function SettingsPage() {
             </div>
             
              <div className="space-y-2">
-              <label className="text-sm font-medium">Store Type</label>
+              <label className="text-sm font-medium">{t('dash.store_type')}</label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(['clothing', 'restaurant', 'tech', 'other'] as const).map((type) => (
                   <button
@@ -58,10 +60,10 @@ export default function SettingsPage() {
                   >
                     <span className="capitalize font-medium block">{type}</span>
                     <span className="text-xs text-muted-foreground">
-                      {type === 'clothing' && 'Fashion & Apparel'}
-                      {type === 'restaurant' && 'Food & Beverages'}
-                      {type === 'tech' && 'Electronics & Gadgets'}
-                      {type === 'other' && 'General Purpose'}
+                      {type === 'clothing' && t('dash.type_clothing')}
+                      {type === 'restaurant' && t('dash.type_restaurant')}
+                      {type === 'tech' && t('dash.type_tech')}
+                      {type === 'other' && t('dash.type_other')}
                     </span>
                   </button>
                 ))}
@@ -75,7 +77,7 @@ export default function SettingsPage() {
                 disabled={loading}
                 className="bg-primary text-white px-6 py-2 rounded-xl font-medium hover:opacity-90 flex items-center gap-2"
              >
-               {loading ? 'Saving...' : <><Save className="w-4 h-4" /> Save Changes</>}
+               {loading ? t('dash.saving') : <><Save className="w-4 h-4" /> {t('profile.save')}</>}
              </button>
            </div>
         </section>

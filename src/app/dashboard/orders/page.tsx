@@ -532,7 +532,7 @@ export default function DashboardOrders() {
                                 </div>
                                 <div className="ml-auto text-right">
                                     <p className="font-black text-foreground">{formatCurrency(order.total)}</p>
-                                    <p className="text-[10px] text-muted-foreground">{order.order_items.length} items</p>
+                                    <p className="text-[10px] text-muted-foreground">{order.order_items.length} {t('dash.items') || 'items'}</p>
                                 </div>
                             </div>
                             
@@ -656,7 +656,7 @@ export default function DashboardOrders() {
                                 <p className="font-bold text-lg text-foreground mb-2">{selectedOrder.customer_name}</p>
                                 <div className="space-y-1">
                                     <p className="text-xs text-muted-foreground flex items-center gap-2">
-                                        <Mail className="w-3 h-3" /> {selectedOrder.customer_email || 'No email'}
+                                        <Mail className="w-3 h-3" /> {selectedOrder.customer_email || t('dash.no_email')}
                                     </p>
                                     <p className="text-xs text-muted-foreground flex items-center gap-2">
                                         <Phone className="w-3 h-3" /> {selectedOrder.phone}
@@ -692,20 +692,20 @@ export default function DashboardOrders() {
                                     <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center">
                                         <CreditCard className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                                     </div>
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">Detalles de Pago</h3>
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">{t('dash.payment_details')}</h3>
                                 </div>
                                 
                                 {selectedOrder.payment_info ? (
                                     <div className="space-y-2">
                                          {selectedOrder.payment_info.payment_method_id && (
                                             <div className="flex justify-between items-center text-sm">
-                                                <span className="text-muted-foreground">Método:</span>
+                                                <span className="text-muted-foreground">{t('dash.method')}:</span>
                                                 <span className="font-bold uppercase text-foreground">{selectedOrder.payment_info.payment_method_id}</span>
                                             </div>
                                          )}
                                          {selectedOrder.payment_info.payment_type_id && (
                                             <div className="flex justify-between items-center text-sm">
-                                                <span className="text-muted-foreground">Tipo:</span>
+                                                <span className="text-muted-foreground">{t('dash.payment_type')}:</span>
                                                 <span className="font-medium capitalize text-foreground">{selectedOrder.payment_info.payment_type_id.replace(/_/g, ' ')}</span>
                                             </div>
                                          )}
@@ -717,12 +717,12 @@ export default function DashboardOrders() {
                                          )}
                                          {selectedOrder.payment_info.date_approved && (
                                             <div className="text-[10px] text-muted-foreground pt-2 text-right">
-                                               Aprobado: {new Date(selectedOrder.payment_info.date_approved).toLocaleString('es-CO')}
+                                               {t('dash.approved_at')}: {new Date(selectedOrder.payment_info.date_approved).toLocaleString('es-CO')}
                                             </div>
                                          )}
                                     </div>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground italic">Sin detalles de pago adicionales.</p>
+                                    <p className="text-sm text-muted-foreground italic">{t('dash.no_payment_details')}</p>
                                 )}
                             </div>
                         </div>

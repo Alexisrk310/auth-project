@@ -33,7 +33,7 @@ function SuccessContent() {
   useEffect(() => {
     const processOrder = async () => {
         if (!orderId) {
-            setError(t('page.success.no_order_id') || 'No se encontró el ID de la orden.')
+            setError(t('page.success.no_order_id'))
             setLoading(false)
             return
         }
@@ -104,7 +104,7 @@ function SuccessContent() {
                   <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
                   <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
               </div>
-              <p className="mt-4 text-muted-foreground font-medium animate-pulse">{t('checkout.processing') || 'Procesando tu pedido...'}</p>
+              <p className="mt-4 text-muted-foreground font-medium animate-pulse">{t('checkout.processing_order')}</p>
           </div>
       )
   }

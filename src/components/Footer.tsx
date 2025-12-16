@@ -58,32 +58,39 @@ export default function Footer() {
           <div>
             <h4 className="font-bold mb-6 text-white">{t('footer.newsletter')}</h4>
             <p className="text-sm text-zinc-400 mb-4">{t('footer.newsletter.desc')}</p>
-            <form className="flex gap-2">
-              <input 
-                type="email" 
-                placeholder={t('auth.email')} 
-                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary transition-colors text-white placeholder:text-zinc-600"
-              />
-              <button 
-                type="submit"
-                className="bg-primary hover:bg-primary/90 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
-              >
-                {t('footer.subscribe_btn')}
-              </button>
-            </form>
+            <form action={async (formData) => {
+                  const { subscribeToNewsletter } = await import('@/app/newsletter-actions')
+                  const res = await subscribeToNewsletter(formData)
+                  if (res?.error) {
+                    alert(res.error) // Replace with toast if available
+                  } else {
+                    alert('Subscribed!')
+                  }
+               }} className="flex gap-2">
+                  <input 
+                    name="email"
+                    type="email" 
+                    placeholder={t('auth.email_placeholder')}
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary transition-colors text-white placeholder:text-zinc-600"
+                    required
+                  />
+                  <button type="submit" className="bg-primary hover:bg-primary/90 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors">
+                     {t('footer.subscribe_btn')}
+                  </button>
+               </form>
             <div className="mt-6 space-y-2">
                  <div className="flex items-center gap-2 text-xs text-zinc-400">
                     <MapPin className="w-3 h-3 text-primary" />
                     <span>{t('footer.address')}</span>
                  </div>
-                 <div className="flex items-center gap-2 text-xs text-zinc-400">
-                    <Phone className="w-3 h-3 text-primary" />
-                    <span>+57 300 123 4567</span>
-                 </div>
-                 <div className="flex items-center gap-2 text-xs text-zinc-400">
-                    <Mail className="w-3 h-3 text-primary" />
-                    <span>support@thunderxis.com</span>
-                 </div>
+                  <div className="flex items-center gap-2 text-xs text-zinc-400">
+                     <Phone className="w-3 h-3 text-primary" />
+                     <span>{t('footer.phone')}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-zinc-400">
+                     <Mail className="w-3 h-3 text-primary" />
+                     <span>{t('footer.email')}</span>
+                  </div>
             </div>
           </div>
 
