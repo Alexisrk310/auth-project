@@ -14,14 +14,14 @@ import { v4 as uuidv4 } from 'uuid'
 import { SHIPPING_RATES, DEFAULT_SHIPPING_COST } from '@/config/shipping'
 
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, total } = useCartStore()
+  const { items, removeItem, updateQuantity, total, isLoading } = useCartStore()
   const { t } = useLanguage()
   const { user } = useAuth()
   const { addToast } = useToast()
   
   const [loading, setLoading] = useState(false)
-  
-  // Shipping Form State
+
+  // ... (shipping form state) ...
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -60,14 +60,26 @@ export default function CartPage() {
   }, [])
 
   // Calculate dynamic shipping cost
+  // ... (keep existing) ...
   const shippingCost = useMemo(() => {
     if (!formData.city) return 0
     return SHIPPING_RATES[formData.city] || DEFAULT_SHIPPING_COST
   }, [formData.city])
 
-  // Empty State
+
+  if (isLoading) {
+      return (
+          <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+              <Loader2 className="w-12 h-12 animate-spin text-primary" />
+              <p className="mt-4 text-muted-foreground">{t('cart.verifying_prices') || 'Cargando carrito...'}</p>
+          </div>
+      )
+  }
+
+  // Empty State (keep existing)
   if (items.length === 0) {
-    return (
+      // ... keep existing empty state
+      return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
         <h1 className="text-3xl font-bold mb-4">{t('nav.cart')}</h1>
         <p className="text-muted-foreground mb-8 text-lg">{t('cart.empty')}</p>
@@ -81,7 +93,9 @@ export default function CartPage() {
     )
   }
 
+  // ... rest of component rendering ...
   const handleCheckout = async () => {
+    // ... (keep existing handleCheckout logic) ...
     // Validate Form
     if (!formData.name || !formData.email || !formData.address || !formData.city || !formData.phone) {
         addToast(`${t('checkout.missing_fields')}`, 'error')
@@ -92,9 +106,7 @@ export default function CartPage() {
 
     try {
       let userId = user?.id || null
-
-      // Guest Check: If no user, ensure email is captured (it is required by form validation above)
-      
+      // ...
       const orderId = uuidv4()
       const finalTotal = total() + shippingCost
       const fullAddress = formData.neighborhood 

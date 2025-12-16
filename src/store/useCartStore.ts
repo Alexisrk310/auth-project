@@ -1,138 +1,223 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import { supabase } from '@/lib/supabase/client'
 
 export interface Product {
-  id: string
-  name: string
-  description: string
-  price: number
-  image_url: string
-  images?: string[]
-  category?: string
-  sale_price?: number
-  is_new?: boolean
-  stock?: number
-  sizes?: string[]
-  colors?: string[]
-  stock_by_size?: Record<string, number>
-  compare_at_price?: number
+    id: string
+    name: string
+    description: string
+    price: number
+    image_url: string
+    images?: string[]
+    category?: string
+    sale_price?: number
+    is_new?: boolean
+    stock?: number
+    stock_by_size?: Record<string, number>
+    compare_at_price?: number
+    sizes?: string[]
 }
 
 interface CartItem extends Product {
-  quantity: number
-  size?: string
+    quantity: number
+    size?: string
 }
 
 interface CartState {
-  items: CartItem[]
-  isOpen: boolean
-  addItem: (product: Product & { size?: string, quantity?: number }) => boolean
-  removeItem: (productId: string, size?: string) => void
-  updateQuantity: (productId: string, quantity: number, size?: string) => void
-  clearCart: () => void
-  toggleCart: () => void
-  total: () => number
+    cartId: string | null
+    items: CartItem[]
+    isOpen: boolean
+    isLoading: boolean
+    addItem: (product: Product & { size?: string, quantity?: number }) => Promise<boolean>
+    removeItem: (productId: string, size?: string) => Promise<void>
+    updateQuantity: (productId: string, quantity: number, size?: string) => Promise<void>
+    clearCart: () => Promise<void>
+    toggleCart: () => void
+    fetchCart: () => Promise<void>
+    total: () => number
 }
 
 export const useCartStore = create<CartState>()(
-  persist(
-    (set, get) => ({
-      items: [],
-      isOpen: false,
-      addItem: (product) => {
-        const items = get().items
-        const { size } = product
-        
-        // Find existing item
-        const existingItem = items.find((item) => 
-          item.id === product.id && item.size === size
-        )
+    persist(
+        (set, get) => ({
+            cartId: null,
+            items: [],
+            isOpen: false,
+            isLoading: false,
 
-        const currentQty = existingItem ? existingItem.quantity : 0
-        const addingQty = product.quantity || 1
-        // Default validation: If stock is undefined/missing in product object, 
-        // we should probably allow adding (or assume 0 as per strict request).
-        // Since user wants strict validation, we stick to respecting 'stock'.
-        // However, we must ensure the UI passes it.
-        const maxStock = product.stock !== undefined ? product.stock : 100 // Fallback if missing? No, user wants strict.
-        
-        // Actually, if stock is accidentally undefined, 0 blocks everything. 
-        // Let's rely on the passed stock, but if it's strictly undefined, maybe 0 is correct if we trust the API.
-        // But for safety against "buggy UI passing", let's handle the 0 case mostly.
-        const effectiveStock = product.stock ?? 0 
+            fetchCart: async () => {
+                const { cartId } = get()
+                if (!cartId) return
 
-        if (currentQty + addingQty > effectiveStock) {
-           return false
-        }
+                set({ isLoading: true })
+                try {
+                    // Fetch items joined with products
+                    const { data: cartItems, error } = await supabase
+                        .from('cart_items')
+                        .select(`
+                            quantity,
+                            size,
+                            product:products (
+                                id, name, description, price, sale_price, image_url, images, 
+                                category, is_new, stock, stock_by_size, compare_at_price
+                            )
+                        `)
+                        .eq('cart_id', cartId)
 
-        if (existingItem) {
-          set({
-            items: items.map((item) =>
-              (item.id === product.id && item.size === size)
-                ? { ...item, quantity: item.quantity + addingQty }
-                : item
-            ),
-            isOpen: true,
-          })
-        } else {
-          set({ 
-            items: [...items, { 
-                ...product, 
-                quantity: addingQty,
-                size: size 
-            }], 
-            isOpen: true 
-          })
-        }
-        return true
-      },
-      removeItem: (productId, size) => {
-        set({ 
-            items: get().items.filter((item) => 
-                !(item.id === productId && (size ? item.size === size : true))
-            ) 
-        })
-      },
-      updateQuantity: (productId, quantity, size) => {
-        if (quantity <= 0) {
-          get().removeItem(productId, size)
-          return
-        }
+                    if (error) throw error
 
-        // Check stock
-        const item = get().items.find(i => i.id === productId && i.size === size)
-        if (item) {
-            const maxStock = item.stock !== undefined ? item.stock : 100 // Default if missing, but should exist
-            // Sliently cap or return? 
-            // If the UI is smart, it won't ask for more.
-            // If it does, we just block the update if it exceeds.
-            if (quantity > maxStock) {
-                // Do nothing (prevent update) or cap?
-                // Capping is safer for sync.
-                // But let's just return to prevent 'jumping' to invalid state.
-                return 
+                    // Transform nested data to flat CartItem
+                    const items: CartItem[] = cartItems.map((item: any) => {
+                        const p = item.product
+                        // Determine effective price directly from fresh DB data
+                        const effectivePrice = p.sale_price || p.price
+                        
+                        return {
+                            ...p,
+                            price: effectivePrice, // ALWAYS use DB price
+                            quantity: item.quantity,
+                            size: item.size
+                        }
+                    })
+
+                    set({ items })
+                } catch (error: any) {
+                    console.error('Error fetching cart:', error.message || error)
+                    if (error.code) console.error('Error content:', error)
+                } finally {
+                    set({ isLoading: false })
+                }
+            },
+
+            addItem: async (product) => {
+                let { cartId } = get()
+                const quantity = product.quantity || 1
+                const size = product.size || 'M'
+
+                try {
+                    // 1. Check local state for instant stock validation
+                    // (We assume get().items is relatively fresh due to Realtime)
+                    const existingItem = get().items.find(i => i.id === product.id && i.size === size)
+                    const currentQty = existingItem ? existingItem.quantity : 0
+                    
+                    const availableStock = product.stock_by_size 
+                        ? (product.stock_by_size[size] || 0) 
+                        : (product.stock || 0)
+
+                    if (currentQty + quantity > availableStock) {
+                        return false // Stock limit reached
+                    }
+
+                    // 2. Ensure Cart Exists
+                    if (!cartId) {
+                        const { data: newCart, error: cartError } = await supabase
+                            .from('carts')
+                            .insert({})
+                            .select()
+                            .single()
+                        
+                        if (cartError) throw cartError
+                        cartId = newCart.id
+                        set({ cartId }) // Persist ID
+                    }
+
+                    const newQuantity = currentQty + quantity
+
+                    // 3. Upsert Item
+                    const { error: itemError } = await supabase
+                        .from('cart_items')
+                        .upsert({
+                            cart_id: cartId,
+                            product_id: product.id,
+                            size: size,
+                            quantity: newQuantity
+                        }, { onConflict: 'cart_id, product_id, size' })
+
+                    if (itemError) throw itemError
+
+                    set({ isOpen: true })
+                    get().fetchCart()
+                    return true
+
+                } catch (error) {
+                    console.error('Error adding item:', error)
+                    return false
+                }
+            },
+
+            removeItem: async (productId, size) => {
+                const { cartId } = get()
+                if (!cartId) return
+
+                await supabase
+                    .from('cart_items')
+                    .delete()
+                    .eq('cart_id', cartId)
+                    .eq('product_id', productId)
+                    .eq('size', size || 'M') // Handle optional size
+                
+                get().fetchCart() // Refresh
+            },
+
+            updateQuantity: async (productId, quantity, size) => {
+                const { cartId } = get()
+                if (!cartId) return
+
+                if (quantity <= 0) {
+                    get().removeItem(productId, size)
+                    return
+                }
+
+                await supabase
+                    .from('cart_items')
+                    .update({ quantity })
+                    .eq('cart_id', cartId)
+                    .eq('product_id', productId)
+                    .eq('size', size || 'M')
+
+                get().fetchCart()
+            },
+
+            clearCart: async () => {
+                const { cartId } = get()
+                if (cartId) {
+                    await supabase.from('cart_items').delete().eq('cart_id', cartId)
+                    set({ items: [] })
+                }
+            },
+
+            toggleCart: () => set({ isOpen: !get().isOpen }),
+
+            total: () => {
+                return get().items.reduce(
+                    (acc, item) => acc + item.price * item.quantity,
+                    0
+                )
+            }
+        }),
+        {
+            name: 'cart-storage-id', // Only persist the ID now!
+            partialize: (state) => ({ cartId: state.cartId }), // Don't persist items, fetch them!
+            storage: createJSONStorage(() => localStorage),
+            onRehydrateStorage: () => (state) => {
+                if (state) {
+                    state.fetchCart()
+
+                    // Subscribe to Realtime Changes
+                    const channel = supabase.channel('cart-realtime')
+                        .on('postgres_changes', { event: '*', schema: 'public', table: 'cart_items', filter: `cart_id=eq.${state.cartId}` }, () => {
+                            console.log('Realtime: Cart items changed!')
+                            state.fetchCart()
+                        })
+                        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products' }, () => {
+                            console.log('Realtime: Product updated! Refreshing cart prices.')
+                            state.fetchCart()
+                        })
+                        .subscribe()
+                    
+                    // Cleanup? Global store, keeps running.
+                }
             }
         }
-
-        set({
-          items: get().items.map((item) =>
-            (item.id === productId && item.size === size) 
-                ? { ...item, quantity } 
-                : item
-          ),
-        })
-      },
-      clearCart: () => set({ items: [] }),
-      toggleCart: () => set({ isOpen: !get().isOpen }),
-      total: () => {
-        return get().items.reduce(
-          (acc, item) => acc + item.price * item.quantity,
-          0
-        )
-      },
-    }),
-    {
-      name: 'cart-storage',
-    }
-  )
+    )
 )

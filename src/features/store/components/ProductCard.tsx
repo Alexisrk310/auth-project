@@ -26,6 +26,21 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const [reviewCount, setReviewCount] = useState<number>(0)
 
   useEffect(() => {
+    // Auto-select first available size
+    if (product) {
+       const sizes = product.sizes?.length ? product.sizes : ['S', 'M', 'L', 'XL']
+       const firstAvailable = sizes.find(size => {
+           return product.stock_by_size ? (product.stock_by_size[size] || 0) > 0 : (product.stock || 0) > 0
+       })
+       if (firstAvailable) {
+           setSelectedSize(firstAvailable)
+       } else if (sizes.length > 0) {
+           setSelectedSize(sizes[0])
+       }
+    }
+  }, [product])
+
+  useEffect(() => {
     const fetchRating = async () => {
         const { data } = await supabase
             .from('reviews')
@@ -48,7 +63,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
     return (product.stock || 0) > 0
   }
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     
@@ -58,15 +73,17 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
     }
 
     const availableStock = product.stock_by_size ? (product.stock_by_size[selectedSize] || 0) : product.stock
+    const effectivePrice = product.sale_price || product.price
 
-    const success = addItem({
+    // Show optional loading state or just await
+    const success = await addItem({
       id: product.id,
       name: product.name,
-      price: product.price,
+      price: effectivePrice,
       image_url: product.images?.[0] || product.image_url || '/placeholder.png',
       description: product.description,
       size: selectedSize,
-      stock: availableStock // Pass specific size stock
+      stock: availableStock
     })
     
     if (success) {
@@ -152,6 +169,16 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
                     )
                 })}
             </div>
+            {selectedSize && (
+                <div className="text-[10px] text-white/90 text-center font-medium">
+                     {(() => {
+                        const stock = product.stock_by_size 
+                            ? (product.stock_by_size[selectedSize] || 0)
+                            : (product.stock || 0)
+                        return stock > 0 ? `${stock} ${t('product.available_stock')}` : t('products.out_stock')
+                     })()}
+                </div>
+            )}
 
             <div className="flex gap-2">
                 <Link href={`/shop/${product.id}`} className="flex-1">

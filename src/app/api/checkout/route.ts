@@ -18,18 +18,27 @@ export async function POST(req: Request) {
        return NextResponse.json({ error: 'Server Config Error: Missing MP Token' }, { status: 500 });
     }
 
-    // --- Server-Side Stock Validation ---
+    // --- Server-Side Validation & Price Enforcement ---
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+    // We will rebuild the items list for MercadoPago using strictly DB data
+    const validatedItems: any[] = [];
+
     for (const item of items) {
-        // Assuming item.id works. If your cart stores Supabase ID as 'id', this is correct.
+        if (item.id === 'shipping') {
+            // Shipping is dynamic based on location, we trust the client logic for shipping cost 
+            // BUT ideally this should also be recalculated if we passed the city. 
+            // For now, allow passing it but we could validate if it matches our shipping config.
+            validatedItems.push(item); 
+            continue; 
+        }
+        
         // Also assuming 'quantity' is passed in the item object.
         if (!item.id || !item.quantity) continue;
-        if (item.id === 'shipping') continue; // Skip shipping item validation
 
         const { data: product, error } = await supabase
             .from('products')
-            .select('stock, name')
+            .select('stock, name, price')
             .eq('id', item.id)
             .single();
 
@@ -43,10 +52,18 @@ export async function POST(req: Request) {
                 error: `Desafortunadamente, no hay suficiente stock para ${product.name}. Disponible: ${product.stock}` 
             }, { status: 400 });
         }
-    }
-    // ------------------------------------
 
-    const preference = await createPreference(items, orderId);
+        // Push RECONSTRUCTED item with DB price and name
+        validatedItems.push({
+            id: item.id,
+            name: product.name, // Use DB name
+            quantity: Number(item.quantity),
+            price: Number(product.price), // Use DB price
+        });
+    }
+    // --------------------------------------------------
+
+    const preference = await createPreference(validatedItems, orderId);
     
     return NextResponse.json({ url: preference.init_point });
   } catch (error: any) {

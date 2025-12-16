@@ -48,14 +48,42 @@ export default function ProductDetailsClient() {
     fetchProduct()
   }, [id])
 
-  const handleAddToCart = () => {
+  // Select first available size on load
+  useEffect(() => {
+    if (product) {
+        const sizesToDisplay = product.stock_by_size && Object.keys(product.stock_by_size).length > 0
+            ? Object.keys(product.stock_by_size)
+            : (product.sizes && product.sizes.length > 0 ? product.sizes : ['S', 'M', 'L', 'XL'])
+
+        const firstAvailable = sizesToDisplay.find(size => {
+            const stock = product.stock_by_size 
+                ? (product.stock_by_size[size] || 0) 
+                : (product.stock || 0)
+            return stock > 0
+        })
+
+        if (firstAvailable) {
+            setSelectedSize(firstAvailable)
+        } else if (sizesToDisplay.length > 0) {
+            setSelectedSize(sizesToDisplay[0])
+        }
+    }
+  }, [product])
+
+  const handleAddToCart = async () => {
     if (product) {
       if (product.stock_by_size && product.stock_by_size[selectedSize] < quantity) {
           addToast(t('products.no_stock'), 'error')
           return
       }
-      addItem({ ...product, size: selectedSize, quantity })
-      addToast(t('products.added_cart'), 'success')
+      const effectivePrice = product.sale_price || product.price
+      const success = await addItem({ ...product, price: effectivePrice, size: selectedSize, quantity })
+      
+      if (success) {
+        addToast(t('products.added_cart'), 'success')
+      } else {
+        addToast(t('cart.stock_limit_reached'), 'error')
+      }
     }
   }
 
@@ -107,6 +135,10 @@ export default function ProductDetailsClient() {
   const allImages = product.images && product.images.length > 0 
       ? product.images 
       : [product.image_url || '/placeholder.png']
+
+  // Effective Price Logic
+  const effectivePrice = product.sale_price || product.price
+  const oldPrice = product.sale_price ? product.price : product.compare_at_price
 
   return (
     <div className="min-h-screen bg-background pb-20 pt-24">
@@ -207,23 +239,29 @@ export default function ProductDetailsClient() {
                 <div className="flex items-center gap-4 mb-6">
                     <div className="flex items-baseline gap-3">
                         <span className="text-3xl font-bold text-primary">
-                            {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(product.price)}
+                            {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(effectivePrice)}
                         </span>
-                        {product.compare_at_price && (
+                        {oldPrice && (
                             <span className="text-xl text-muted-foreground line-through decoration-destructive/50">
-                                {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(product.compare_at_price)}
+                                {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(oldPrice)}
                             </span>
                         )}
                     </div>
-                    {(product.stock ?? 0) > 0 ? (
-                         <span className="px-3 py-1 bg-green-500/10 text-green-500 text-xs font-bold rounded-full border border-green-500/20">
-                            {t('products.in_stock')}
-                         </span>
-                    ) : (
-                        <span className="px-3 py-1 bg-destructive/10 text-destructive text-xs font-bold rounded-full border border-destructive/20">
-                             {t('products.out_stock')}
-                        </span>
-                    )}
+                    {(() => {
+                        const currentStock = product.stock_by_size 
+                            ? (product.stock_by_size[selectedSize] || 0)
+                            : (product.stock || 0)
+                        
+                        return currentStock > 0 ? (
+                             <span className="px-3 py-1 bg-green-500/10 text-green-500 text-xs font-bold rounded-full border border-green-500/20">
+                                {currentStock} {t('product.available_stock') || 'disponibles'}
+                             </span>
+                        ) : (
+                            <span className="px-3 py-1 bg-destructive/10 text-destructive text-xs font-bold rounded-full border border-destructive/20">
+                                 {t('products.out_stock')}
+                            </span>
+                        )
+                    })()}
                 </div>
 
                 <p className="text-lg text-muted-foreground leading-relaxed">
@@ -233,44 +271,58 @@ export default function ProductDetailsClient() {
 
             <div className="space-y-8 flex-grow">
                 {/* Size Selector */}
-                {product.stock_by_size && Object.keys(product.stock_by_size).length > 0 && (
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                             <span className="font-bold text-sm uppercase tracking-wider text-muted-foreground">
-                                {t('products.select_size')}
-                             </span>
-                             <button className="text-xs font-bold text-primary hover:underline">
-                                {t('products.size_guide')}
-                             </button>
+                {/* Size Selector */}
+                {(() => {
+                    const sizesToDisplay = product.stock_by_size && Object.keys(product.stock_by_size).length > 0
+                        ? Object.keys(product.stock_by_size)
+                        : (product.sizes && product.sizes.length > 0 ? product.sizes : ['S', 'M', 'L', 'XL'])
+
+                    return (
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                 <span className="font-bold text-sm uppercase tracking-wider text-muted-foreground">
+                                    {t('products.select_size')}
+                                 </span>
+                                 <button className="text-xs font-bold text-primary hover:underline">
+                                    {t('products.size_guide')}
+                                 </button>
+                            </div>
+                           
+                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                                {sizesToDisplay.map((size) => {
+                                    // Fallback logic for stock availability
+                                    const stock = product.stock_by_size 
+                                        ? (product.stock_by_size[size] || 0)
+                                        : (product.stock || 0)
+
+                                    return (
+                                        <button
+                                            key={size}
+                                            onClick={() => setSelectedSize(size)}
+                                            disabled={stock === 0}
+                                            className={`
+                                                h-12 rounded-xl border-2 font-bold text-sm transition-all relative overflow-hidden
+                                                ${selectedSize === size 
+                                                    ? 'border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/25' 
+                                                    : stock === 0 
+                                                        ? 'border-dashed border-border text-muted-foreground/30 cursor-not-allowed bg-muted/20' 
+                                                        : 'border-border text-foreground hover:border-primary/50 hover:bg-muted'
+                                                }
+                                            `}
+                                        >
+                                            {size}
+                                            {stock === 0 && (
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <div className="w-full h-px bg-destructive/50 rotate-45 transform scale-125" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    )
+                                })}
+                            </div>
                         </div>
-                       
-                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-                            {Object.entries(product.stock_by_size).map(([size, stock]: [string, any]) => (
-                                <button
-                                    key={size}
-                                    onClick={() => setSelectedSize(size)}
-                                    disabled={stock === 0}
-                                    className={`
-                                        h-12 rounded-xl border-2 font-bold text-sm transition-all relative overflow-hidden
-                                        ${selectedSize === size 
-                                            ? 'border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/25' 
-                                            : stock === 0 
-                                                ? 'border-dashed border-border text-muted-foreground/30 cursor-not-allowed bg-muted/20' 
-                                                : 'border-border text-foreground hover:border-primary/50 hover:bg-muted'
-                                        }
-                                    `}
-                                >
-                                    {size}
-                                    {stock === 0 && (
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="w-full h-px bg-destructive/50 rotate-45 transform scale-125" />
-                                        </div>
-                                    )}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                    )
+                })()}
                 
                 {/* Actions */}
                 <div className="pt-8 border-t border-border/50">
