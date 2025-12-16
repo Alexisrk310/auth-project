@@ -93,26 +93,31 @@ export async function updateOrderStatus(orderId: string, status: string, carrier
   }
 }
 
-export async function fetchGuestOrders(orderIds: string[]) {
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+
+// ... (existing updateOrderStatus remains, but need to be careful with imports) 
+// Actually I need to keep the file structure.
+// Wait, `createClient` on line 3 is from `@/lib/supabase/server`.
+// I will use `createAdminClient` helper pattern if I can, or just local.
+
+const getAdminClient = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-  
-  // Debug: Check if key exists (don't log the actual key for safety, just existence)
-  if (!supabaseKey) {
-      console.error('CRITICAL: SUPABASE_SERVICE_ROLE_KEY is missing')
-      return { orders: [], error: 'Missing Service Role Key' }
-  }
+  if (!supabaseKey) throw new Error('MISSING_SERVICE_ROLE_KEY')
+  return createSupabaseClient(supabaseUrl, supabaseKey)
+}
 
-  const supabase = (await import('@supabase/supabase-js')).createClient(supabaseUrl, supabaseKey);
-
+export async function fetchGuestOrders(orderIds: string[]) {
   if (!orderIds || orderIds.length === 0) return { orders: [], error: 'No IDs provided' }
 
   try {
+      const supabase = getAdminClient()
+
       // Step 1: Fetch orders without embedding order_items
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select(`
-            id, created_at, status, total, shipping_address, city, customer_email
+            id, created_at, status, total, shipping_address, city, customer_email, user_id
         `)
         .in('id', orderIds)
         .order('created_at', { ascending: false })
@@ -123,6 +128,7 @@ export async function fetchGuestOrders(orderIds: string[]) {
       }
       
       if (!orders || orders.length === 0) {
+          console.log(`Debug: No orders found for IDs: ${orderIds.join(', ')}`)
           return { orders: [], error: null }
       }
 
@@ -138,8 +144,6 @@ export async function fetchGuestOrders(orderIds: string[]) {
 
       if (itemsError) {
             console.error('Error fetching order items:', itemsError)
-            // Even if items fail, we might want to return orders, but generally detailed view needs items.
-            // Let's return error to be safe or empty items.
             return { orders: [], error: itemsError.message }
       }
 
@@ -157,4 +161,32 @@ export async function fetchGuestOrders(orderIds: string[]) {
       console.error('Exception fetching guest orders:', error)
       return { orders: [], error: error.message || 'Unknown Exception' }
   }
+}
+
+export async function linkGuestOrders(userId: string, orderIds: string[]) {
+    try {
+        const supabase = getAdminClient()
+        
+        // Only update orders that don't have a user_id yet (safety)
+        // Or if we trust local storage "ownership", we can just overwrite.
+        // Safer to only update if user_id is null or match.
+        // But for simplicty and "claiming", we update where ID matches.
+        
+        const { data, error } = await supabase
+            .from('orders')
+            .update({ user_id: userId })
+            .in('id', orderIds)
+            .is('user_id', null) // Only claim orphan orders!
+            .select()
+
+        if (error) {
+            console.error('Error linking orders:', error)
+            return { success: false, error: error.message }
+        }
+
+        return { success: true, count: data?.length || 0 }
+    } catch (error: any) {
+        console.error('Exception linking orders:', error)
+        return { success: false, error: error.message }
+    }
 }

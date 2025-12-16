@@ -3,13 +3,13 @@ import { confirmOrder } from '@/lib/orders';
 
 export async function POST(req: Request) {
   try {
-    const { orderId } = await req.json();
+    const { orderId, paymentData } = await req.json();
 
     if (!orderId) {
         return NextResponse.json({ error: 'Missing orderId' }, { status: 400 });
     }
 
-    const result = await confirmOrder(orderId);
+    const result = await confirmOrder(orderId, paymentData);
 
     return NextResponse.json(result);
 

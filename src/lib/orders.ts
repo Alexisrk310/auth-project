@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Admin client for backend operations
-export async function confirmOrder(orderId: string) {
+export async function confirmOrder(orderId: string, paymentData?: any) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
@@ -47,10 +47,15 @@ export async function confirmOrder(orderId: string) {
       }
   }
 
-  // 4. Update Order Status
+  // 4. Update Order Status and Payment Info
+  const updatePayload: any = { status: 'paid' };
+  if (paymentData) {
+      updatePayload.payment_info = paymentData;
+  }
+
   const { error: updateError } = await supabaseAdmin
       .from('orders')
-      .update({ status: 'paid' })
+      .update(updatePayload)
       .eq('id', orderId);
 
   if (updateError) {

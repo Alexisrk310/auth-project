@@ -9,7 +9,7 @@ import { useLanguage } from '@/components/LanguageProvider'
 import { useToast } from '@/components/ui/Toast' // Added Toast import
 import Link from 'next/link'
 import Image from 'next/image'
-import { fetchGuestOrders } from '@/actions/orders'
+import { fetchGuestOrders, linkGuestOrders } from '@/actions/orders'
 
 
 interface Order {
@@ -55,9 +55,23 @@ export default function MyOrdersPage() {
         setLoading(true)
         setDebugError(null)
         try {
-            const localGuestIds = JSON.parse(localStorage.getItem('guest_orders') || '[]')
+            let localGuestIds = JSON.parse(localStorage.getItem('guest_orders') || '[]')
             console.log('DEBUG: localGuestIds found:', localGuestIds)
             
+            // 0. Auto-Link if User Logged In
+            if (user && localGuestIds.length > 0) {
+                 console.log('DEBUG: Linking guest orders to user...')
+                 const linkResult = await linkGuestOrders(user.id, localGuestIds)
+                 if (linkResult.success) {
+                     console.log(`DEBUG: Linked ${linkResult.count} orders. Clearing local guest storage.`)
+                     localStorage.removeItem('guest_orders')
+                     localGuestIds = [] // Treat as empty now
+                     addToast(t('my_orders.orders_linked'), 'success')
+                 } else {
+                     console.error('DEBUG: Link Error:', linkResult.error)
+                 }
+            }
+
             // 1. Fetch Guest Orders (Server Action)
             let fetchedGuestOrders: any[] = []
             if (localGuestIds.length > 0) {
@@ -70,7 +84,7 @@ export default function MyOrdersPage() {
                 fetchedGuestOrders = result.orders || []
                 console.log('DEBUG: fetchedGuestOrders result:', fetchedGuestOrders)
             } else {
-                console.log('DEBUG: No local guest IDs found.')
+                console.log('DEBUG: No local guest IDs found (or cleared after linking).')
             }
 
             // ... (rest of logic same) ...

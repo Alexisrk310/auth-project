@@ -65,7 +65,7 @@ export async function POST(req: Request) {
            
            if (orderId) {
                console.log(`Webhook: Confirming order ${orderId} for payment ${id}`);
-               const confirmation = await confirmOrder(orderId);
+               const confirmation = await confirmOrder(orderId, paymentData);
                
                if (confirmation.success && confirmation.order) {
                    const order = confirmation.order;

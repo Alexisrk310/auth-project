@@ -37,6 +37,7 @@ interface Order {
   user_id: string
   carrier?: string
   tracking_number?: string
+  payment_info?: any
   order_items: OrderItem[]
 }
 
@@ -251,7 +252,16 @@ export default function DashboardOrders() {
     doc.text(order.customer_name, 120, 60)
     if (order.customer_email) doc.text(order.customer_email, 120, 64)
     doc.text(order.shipping_address, 120, 68)
+    doc.text(order.shipping_address, 120, 68)
     doc.text(`${order.city} - Tel: ${order.phone}`, 120, 72)
+    
+    // Payment Info in Invoice
+    if (order.payment_info?.payer?.identification) {
+        doc.text(`${order.payment_info.payer.identification.type}: ${order.payment_info.payer.identification.number}`, 120, 76)
+    }
+    if (order.payment_info?.payment_method_id) {
+        doc.text(`Método: ${order.payment_info.payment_method_id.toUpperCase()} - ${order.payment_info.payment_type_id?.replace('_', ' ')}`, 120, 80)
+    }
     
     // -- Dates --
     doc.text(`${t('invoice.date')} ${new Date(order.created_at).toLocaleDateString('es-CO')}`, 20, 85)
@@ -673,6 +683,46 @@ export default function DashboardOrders() {
                                         {selectedOrder.carrier && <p className="text-xs font-medium text-foreground">{selectedOrder.carrier}</p>}
                                         {selectedOrder.tracking_number && <p className="text-xs font-mono text-muted-foreground bg-white/50 dark:bg-black/20 p-1 rounded inline-block mt-1">{selectedOrder.tracking_number}</p>}
                                     </div>
+                                )}
+                                </div>
+
+                            {/* Payment Info Card (New) */}
+                            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 dark:from-indigo-950/30 dark:to-indigo-900/20 rounded-2xl p-5 border border-indigo-200/50 dark:border-indigo-800/50 col-span-1 md:col-span-3 lg:col-span-1">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                                        <CreditCard className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                    </div>
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">Detalles de Pago</h3>
+                                </div>
+                                
+                                {selectedOrder.payment_info ? (
+                                    <div className="space-y-2">
+                                         {selectedOrder.payment_info.payment_method_id && (
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-muted-foreground">Método:</span>
+                                                <span className="font-bold uppercase text-foreground">{selectedOrder.payment_info.payment_method_id}</span>
+                                            </div>
+                                         )}
+                                         {selectedOrder.payment_info.payment_type_id && (
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-muted-foreground">Tipo:</span>
+                                                <span className="font-medium capitalize text-foreground">{selectedOrder.payment_info.payment_type_id.replace(/_/g, ' ')}</span>
+                                            </div>
+                                         )}
+                                          {selectedOrder.payment_info.payer?.identification && (
+                                            <div className="flex justify-between items-center text-sm border-t border-indigo-200/30 pt-2 mt-2">
+                                                <span className="text-muted-foreground">{selectedOrder.payment_info.payer.identification.type}:</span>
+                                                <span className="font-bold font-mono text-foreground">{selectedOrder.payment_info.payer.identification.number}</span>
+                                            </div>
+                                         )}
+                                         {selectedOrder.payment_info.date_approved && (
+                                            <div className="text-[10px] text-muted-foreground pt-2 text-right">
+                                               Aprobado: {new Date(selectedOrder.payment_info.date_approved).toLocaleString('es-CO')}
+                                            </div>
+                                         )}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground italic">Sin detalles de pago adicionales.</p>
                                 )}
                             </div>
                         </div>

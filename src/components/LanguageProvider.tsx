@@ -433,6 +433,7 @@ const translations: Translations = {
     'my_orders.no_orders_desc': 'Parece que no has comprado nada aún.',
     'my_orders.start_shopping': 'Empezar a Comprar',
     'my_orders.total': 'Total',
+    'my_orders.orders_linked': 'Pedidos vinculados a tu cuenta',
     'dash.custom': 'Personalizado',
     'dash.no_data_export': 'No hay datos para exportar',
     
@@ -1010,6 +1011,7 @@ const translations: Translations = {
     'my_orders.no_orders_desc': 'Looks like you haven\'t bought anything yet.',
     'my_orders.start_shopping': 'Start Shopping',
     'my_orders.total': 'Total',
+    'my_orders.orders_linked': 'Orders linked to your account',
     'dash.custom': 'Custom',
     'dash.no_data_export': 'No data to export',
 
