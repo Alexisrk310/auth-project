@@ -56,9 +56,20 @@ export async function POST(req: Request) {
     }
 
     // Process Payments
-    if ((topic === 'payment' || topic === 'payment') && id) { // Double check topic string
+    if ((topic === 'payment' || topic === 'payment') && id) {
+       console.log(`Webhook: Processing payment ${id}`);
+       console.log(`Webhook: Access Token exists? ${!!accessToken}, Length: ${accessToken.length}`);
+       
        const payment = new Payment(client);
-       const paymentData = await payment.get({ id });
+       let paymentData;
+       try {
+          paymentData = await payment.get({ id });
+          console.log(`Webhook: Payment fetched. Status: ${paymentData.status}`);
+       } catch (paymentError: any) {
+          console.error('Webhook: Error fetching payment from MP:', paymentError?.message || paymentError);
+          // If we can't get payment data, we can't proceed.
+          return NextResponse.json({ status: 'error', error: 'Failed to fetch payment data' }, { status: 500 });
+       }
        
        if (paymentData.status === 'approved') {
            const orderId = paymentData.external_reference;

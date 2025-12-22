@@ -6,12 +6,14 @@ export async function confirmOrder(orderId: string, paymentData?: any) {
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
   if (!supabaseKey) {
+    console.error('confirmOrder: Missing SUPABASE_SERVICE_ROLE_KEY');
     throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY')
   }
 
   // Admin client for backend operations
   const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
+  console.log(`confirmOrder: Fetching order ${orderId}`);
   // 1. Fetch Order
   const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')

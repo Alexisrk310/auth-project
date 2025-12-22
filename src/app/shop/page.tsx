@@ -19,6 +19,7 @@ function ShopContent() {
   
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false)
 
   // Get active filters
@@ -71,6 +72,13 @@ function ShopContent() {
       console.error('Error fetching products:', error.message || error)
       if (typeof error === 'object') {
           console.error('Full error details:', JSON.stringify(error, null, 2))
+      }
+      // Check for Auth error
+      if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
+         console.warn('Potential Auth Error detected. Clearing session might be needed.')
+         setError('auth_error')
+      } else {
+         setError(error.message || 'Unknown error')
       }
     } finally {
       setLoading(false)
@@ -127,6 +135,29 @@ function ShopContent() {
                         {[...Array(6)].map((_, i) => (
                             <ProductSkeleton key={i} />
                         ))}
+                   </div>
+               ) : error ? (
+                   <div className="text-center py-20 bg-red-500/10 rounded-3xl border border-red-500/20 px-4">
+                        <p className="text-lg text-red-400 font-bold mb-2">{t('shop.error_title') || 'Error loading products'}</p>
+                        <p className="text-sm text-red-300/80 mb-6 max-w-md mx-auto">
+                            {error === 'auth_error' 
+                                ? "We encountered an authentication issue. Please try refreshing or logging in again." 
+                                : error}
+                        </p>
+                        <button 
+                            onClick={async () => {
+                                if (error === 'auth_error') {
+                                    // Optional: Force logout or just reload
+                                    await supabase.auth.signOut()
+                                    window.location.href = '/login'
+                                } else {
+                                    window.location.reload()
+                                }
+                            }} 
+                            className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-full font-bold transition-colors"
+                        >
+                            {error === 'auth_error' ? t('auth.login') : t('common.retry')}
+                        </button>
                    </div>
                ) : products.length === 0 ? (
                    <div className="text-center py-20 bg-muted/10 rounded-3xl border border-white/5">
