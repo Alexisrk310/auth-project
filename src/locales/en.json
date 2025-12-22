@@ -646,5 +646,6 @@
   "dash.start_date": "Start Date",
   "dash.end_date": "End Date",
   "dash.sales_report": "Sales Report",
-  "dash.sale_price": "Sale Price"
+  "dash.sale_price": "Sale Price",
+  "no_coupons": "No coupons available"
 }

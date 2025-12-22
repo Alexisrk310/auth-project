@@ -16,6 +16,7 @@ export default function Navbar() {
   const { items, toggleCart } = useCartStore()
   const { language, setLanguage, t } = useLanguage()
   const { user, role } = useAuth()
+  console.log('Navbar Auth State - User:', user?.email, 'Role:', role)
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)

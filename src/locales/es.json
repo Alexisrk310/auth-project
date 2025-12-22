@@ -658,5 +658,6 @@
   "dash.start_date": "Fecha Inicio",
   "dash.end_date": "Fecha Fin",
   "dash.sales_report": "Reporte de Ventas",
-  "dash.sale_price": "Precio de Oferta"
+  "dash.sale_price": "Precio de Oferta",
+  "no_coupons": "No hay cupones disponibles"
 }

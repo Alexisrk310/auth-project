@@ -20,8 +20,14 @@ export function useAuth() {
         setUser(session?.user ?? null)
         
         if (session?.user) {
-             const { data } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
-             setRole(data?.role || 'user')
+
+             const { data, error } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
+
+             if (error) console.error('Error fetching role:', error)
+             else console.log('Role fetched:', data?.role)
+             
+             const normalizedRole = data?.role?.toLowerCase() || 'user'
+             setRole(normalizedRole)
         }
         setLoading(false)
     }
@@ -40,7 +46,10 @@ export function useAuth() {
                 .eq('id', session.user.id)
                 .single()
             
-            setRole(data?.role || 'user')
+            if (error) console.error('Error updating role:', error)
+            
+            const normalizedRole = data?.role?.toLowerCase() || 'user'
+            setRole(normalizedRole)
         } else {
             setRole(null)
         }

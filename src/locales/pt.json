@@ -562,5 +562,6 @@
   "dash.start_date": "Data de Início",
   "dash.end_date": "Data de Término",
   "dash.sales_report": "Relatório de Vendas",
-  "dash.sale_price": "Preço de Oferta"
+  "dash.sale_price": "Preço de Oferta",
+  "no_coupons": "Nenhum cupom disponível"
 }
