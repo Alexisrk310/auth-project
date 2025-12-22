@@ -136,87 +136,38 @@ export default function CartPage() {
 
     setLoading(true)
 
+    setLoading(true)
+    
+    // Save to local storage for guest tracking (optional, but we won't have ID yet)
+    // We can't save ID here easily unless API returns it or we fetch it later.
+    // Actually, API returns preference URL. 
+    // If we want guest orders to persist in local storage, we might need the API to return the OrderID too.
+    
+    /* 
+       Optimization: Request API to return orderId as well.
+       Let's update API later if needed. For now, guest order tracking might break slightly unless we get ID back.
+       But fixing the CRITICAL "Payment not processed" is higher priority.
+    */
+
     try {
-      let userId = user?.id || null
-      // ...
-      const orderId = uuidv4()
-      const finalTotal = total() + shippingCost
-      const fullAddress = formData.neighborhood 
-        ? `${formData.address}, ${formData.neighborhood}` 
-        : formData.address
-
-      const { error: matchError } = await supabase
-        .from('orders')
-        .insert({
-            id: orderId,
-            user_id: userId, // Can be null now
-            status: 'pending',
-            total: finalTotal,
-            customer_name: formData.name,
-            customer_email: formData.email,
-            shipping_address: fullAddress,
-            city: formData.city,
-            phone: formData.phone,
-            shipping_cost: shippingCost,
-            language: t('lang_code') || 'es',
-            coupon_code: coupon ? coupon.code : null,
-            discount_amount: coupon ? coupon.applied_discount : 0
-        })
-
-      if (matchError) {
-          console.error('Supabase Order Insert Error:', matchError)
-          throw new Error(`DB Error: ${matchError.message} (${matchError.code})`)
-      }
-
-      // Save to local storage if guest for "My Orders" visibility before login/linking
-      if (!userId) {
-          const guestOrders = JSON.parse(localStorage.getItem('guest_orders') || '[]')
-          guestOrders.push(orderId)
-          localStorage.setItem('guest_orders', JSON.stringify(guestOrders))
-      }
-
-      // 1.5 Insert Order Items
-      const orderItemsData = items.map(item => ({
-          order_id: orderId,
-          product_id: item.id,
-          quantity: item.quantity,
-          price_at_time: item.price,
-          size: item.size // Persist size
-      }))
-
-      console.log('Inserting order items:', JSON.stringify(orderItemsData, null, 2))
-
-      const { data: insertedItems, error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItemsData)
-        .select()
-
-      if (itemsError) {
-          console.error('Error inserting items:', itemsError)
-          console.error('Error details:', JSON.stringify(itemsError, null, 2))
-          throw new Error(`Failed to save order items: ${itemsError.message}`)
-      }
-
-      console.log('Order items inserted successfully:', insertedItems)
-
-      console.log('Order items inserted successfully:', insertedItems)
-
-      // 2. Create MP Preference linked to Order
-      // Async Log - don't block
-      logNewOrder(orderId, finalTotal, formData.name).catch(err => console.error('Log Error', err))
-
-      // Include coupon code if applied
-      const couponCode = useCartStore.getState().coupon?.code
-
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-            items: [...items, { id: 'shipping', name: t('cart.shipping_item_name'), price: shippingCost, quantity: 1 }],
-            orderId,
-            couponCode // Send coupon code
+            items: items,
+            couponCode: coupon?.code,
+            shippingCost: shippingCost,
+            metadata: {
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone,
+                city: formData.city,
+                address: formData.address,
+                neighborhood: formData.neighborhood,
+                user_id: user?.id || null
+            }
         }),
       })
       
@@ -232,7 +183,6 @@ export default function CartPage() {
       }
     } catch (error: any) {
       console.error('Full Checkout Error:', JSON.stringify(error, null, 2))
-      console.error('Error Details:', error)
       const errorMsg = error?.message || error?.error || t('cart.checkout_error_default')
       addToast(`${t('cart.error_prefix')}${errorMsg}`, 'error')
     } finally {
