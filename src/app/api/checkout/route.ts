@@ -14,6 +14,12 @@ export async function POST(req: Request) {
     
     // Metadata contains: { name, email, phone, city, address, neighborhood, user_id }
     
+    // Validate Email basic format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (metadata?.email && !emailRegex.test(metadata.email)) {
+        return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
+    }
+    
     if (!items || items.length === 0) {
       return NextResponse.json({ error: 'No items in cart' }, { status: 400 });
     }

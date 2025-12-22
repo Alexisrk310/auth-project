@@ -17,7 +17,7 @@ export async function confirmOrder(orderId: string, paymentData?: any) {
   // 1. Fetch Order
   let { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
-      .select('*, order_items(*, products(name, images, image_url))')
+      .select('*, order_items!fk_order_items_orders(*, products(name, images, image_url))')
       .eq('id', orderId)
       .single();
 
