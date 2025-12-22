@@ -59,8 +59,15 @@ export default function Navbar() {
   // Handle Logout
   const handleLogout = async () => {
     setIsLogoutModalOpen(false)
-    await supabase.auth.signOut()
-    window.location.reload()
+    try {
+        await supabase.auth.signOut()
+    } catch (error) {
+        console.error('Logout error (forcing cleanup):', error)
+    } finally {
+        // Force cleanup local storage and refresh to ensure UI sync
+        localStorage.clear() 
+        window.location.href = '/' // Hard reload to clear all states
+    }
   }
 
   // Hide navbar on auth pages AND dashboard
