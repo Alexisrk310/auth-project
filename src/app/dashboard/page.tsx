@@ -31,7 +31,7 @@ import { format } from 'date-fns'
 import { DatePicker } from '@/components/ui/date-picker'
 
 export default function DashboardOverview() {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [timeRange, setTimeRange] = useState('Weekly')
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>()
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>()
@@ -92,7 +92,7 @@ export default function DashboardOverview() {
   }
 
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val)
+    return new Intl.NumberFormat(language, { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val)
   }
 
   const handleExport = async () => {
@@ -132,7 +132,7 @@ export default function DashboardOverview() {
       stats.recentOrders.forEach(order => {
         const row = worksheet.addRow({
           id: order.id.slice(0, 8),
-          date: new Date(order.created_at).toLocaleDateString(),
+          date: new Date(order.created_at).toLocaleDateString(language),
           customer: order.customer_name || 'N/A',
           status: t(`dash.${order.status}`), // Translate status
           amount: order.total
@@ -280,6 +280,7 @@ export default function DashboardOverview() {
                       fontSize={12} 
                       tickLine={false} 
                       axisLine={false}
+                      tickFormatter={(value) => new Date(value).toLocaleDateString(language, { month: 'short', day: 'numeric' })}
                     />
                     <YAxis 
                       stroke="#9ca3af" 
@@ -298,7 +299,8 @@ export default function DashboardOverview() {
                       }}
                        itemStyle={{ color: '#8b5cf6', fontWeight: '600', fontSize: '14px' }}
                       labelStyle={{ color: '#6b7280', fontWeight: '600', fontSize: '12px' }}
-                      formatter={(value: any) => formatCurrency(Number(value))}
+                      formatter={(value: any) => [formatCurrency(Number(value)), t('dash.revenue')]}
+                      labelFormatter={(label) => new Date(label).toLocaleDateString(language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                     />
                     <Area 
                       type="monotone" 
@@ -326,6 +328,7 @@ export default function DashboardOverview() {
                       fontSize={12} 
                       tickLine={false} 
                       axisLine={false}
+                      tickFormatter={(value) => new Date(value).toLocaleDateString(language, { month: 'short', day: 'numeric' })}
                     />
                     <YAxis 
                       stroke="#9ca3af" 
@@ -344,6 +347,8 @@ export default function DashboardOverview() {
                       }}
                       itemStyle={{ color: '#3b82f6', fontWeight: '600', fontSize: '14px' }}
                       labelStyle={{ color: '#6b7280', fontWeight: '600', fontSize: '12px' }}
+                      labelFormatter={(label) => new Date(label).toLocaleDateString(language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                      formatter={(value: any) => [value, t('dash.orders')]}
                     />
                     <Bar dataKey="orders" fill="#3b82f6" radius={[6, 6, 0, 0]} />
                   </BarChart>
@@ -393,7 +398,7 @@ export default function DashboardOverview() {
                           {order.customer_name || 'N/A'}
                         </td>
                         <td className="px-6 py-4 text-sm text-muted-foreground">
-                          {new Date(order.created_at).toLocaleDateString('es-CO', { 
+                          {new Date(order.created_at).toLocaleDateString(language, { 
                             month: 'short', 
                             day: 'numeric', 
                             year: 'numeric' 
@@ -425,7 +430,7 @@ export default function DashboardOverview() {
                                <div className="flex flex-col">
                                   <span className="text-xs font-mono font-bold text-primary">#{order.id.slice(0, 8)}</span>
                                   <span className="text-xs text-muted-foreground">
-                                      {new Date(order.created_at).toLocaleDateString('es-CO', { month: 'short', day: 'numeric' })}
+                                      {new Date(order.created_at).toLocaleDateString(language, { month: 'short', day: 'numeric' })}
                                   </span>
                                </div>
                                <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase

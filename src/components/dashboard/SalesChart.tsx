@@ -16,7 +16,7 @@ interface SalesChartProps {
 }
 
 export function SalesChart({ data }: SalesChartProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   if (!data || data.length === 0) {
     return (
@@ -42,7 +42,7 @@ export function SalesChart({ data }: SalesChartProps) {
             axisLine={false}
             tickLine={false}
             tick={{ fontSize: 12, fill: '#6B7280' }}
-            tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
+            tickFormatter={(value) => new Date(value).toLocaleDateString(language, { day: '2-digit', month: 'short' })}
           />
           <YAxis 
             axisLine={false}
@@ -54,7 +54,7 @@ export function SalesChart({ data }: SalesChartProps) {
             contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px', color: '#fff' }}
             itemStyle={{ color: '#8b5cf6' }}
             formatter={(value: any) => [`$${Number(value).toLocaleString()}`, t('dash.revenue')]}
-            labelFormatter={(label) => new Date(label).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            labelFormatter={(label) => new Date(label).toLocaleDateString(language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           />
           <Area 
             type="monotone" 

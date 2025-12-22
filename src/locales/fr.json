@@ -577,5 +577,6 @@
   "common.updating": "Mise à jour...",
   "dash.start_date": "Date de début",
   "dash.end_date": "Date de fin",
-  "dash.sales_report": "Rapport des ventes"
+  "dash.sales_report": "Rapport des ventes",
+  "dash.sale_price": "Prix de Vente"
 }

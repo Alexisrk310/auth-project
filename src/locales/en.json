@@ -345,9 +345,6 @@
   "auth.error.title": "Authentication Error",
   "auth.error.desc": "There was a problem verifying your login code.",
   "auth.error.back": "Back to Login",
-  "auth.placeholder.name": "John Doe",
-  "auth.placeholder.email": "you@email.com",
-  "auth.placeholder.password": "••••••••",
   "auth.error.invalid_credentials": "Invalid login credentials",
   "auth.error.email_not_confirmed": "Email not confirmed",
   "dash.activity.notifications": "Notifications",
@@ -522,7 +519,6 @@
   "auth.error.password_length": "Password must be at least 6 characters",
   "auth.error.name_required": "Name is required",
   "auth.success.created": "Account created! Please check your email.",
-  "auth.placeholder.email": "you@email.com",
   "discounts.exclusive_offers": "Exclusive Offers",
   "discounts.premium": "Premium",
   "discounts.save_up_to": "Save up to",
@@ -649,5 +645,6 @@
   "common.updating": "Updating...",
   "dash.start_date": "Start Date",
   "dash.end_date": "End Date",
-  "dash.sales_report": "Sales Report"
+  "dash.sales_report": "Sales Report",
+  "dash.sale_price": "Sale Price"
 }
