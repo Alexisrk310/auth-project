@@ -739,7 +739,7 @@ export default function DashboardOrders() {
                                 </span>
                             </div>
                             
-                            <div className="border rounded-2xl overflow-hidden border-border/50">
+                            <div className="border rounded-2xl overflow-hidden border-border/50 overflow-x-auto">
                                 <table className="w-full text-left text-sm">
                                     <thead className="bg-muted/50">
                                         <tr className="border-b border-border/50">

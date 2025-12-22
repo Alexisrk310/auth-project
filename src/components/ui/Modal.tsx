@@ -113,7 +113,7 @@ export function Modal({
                     </button>
                 </div>
 
-                <div className="p-8 flex flex-col items-center text-center">
+                <div className="p-6 sm:p-8 flex flex-col items-center text-center">
                     {/* Icon */}
                     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 ${currentVariant.iconBg} ring-8 ring-background`}>
                         <Icon className="w-8 h-8" strokeWidth={2.5} />

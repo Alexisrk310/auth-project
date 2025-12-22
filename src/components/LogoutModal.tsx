@@ -24,6 +24,15 @@ export function LogoutModal({ isOpen, onClose, onConfirm }: LogoutModalProps) {
     return () => { document.body.style.overflow = 'unset' }
   }, [isOpen])
 
+  // Close on Escape key
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (isOpen && e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [isOpen, onClose])
+
   return (
     <AnimatePresence>
       {isOpen && (

@@ -43,10 +43,17 @@ export default function Navbar() {
   useEffect(() => {
     if (isMobileMenuOpen) {
       document.body.style.overflow = 'hidden'
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') setIsMobileMenuOpen(false)
+      }
+      window.addEventListener('keydown', handleEscape)
+      return () => {
+        document.body.style.overflow = 'unset'
+        window.removeEventListener('keydown', handleEscape)
+      }
     } else {
       document.body.style.overflow = 'unset'
     }
-    return () => { document.body.style.overflow = 'unset' }
   }, [isMobileMenuOpen])
 
   // Handle Logout

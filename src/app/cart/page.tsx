@@ -204,19 +204,19 @@ export default function CartPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="flex gap-6 p-4 rounded-2xl bg-card border border-border/50 shadow-sm"
+                className="flex flex-col sm:flex-row gap-4 sm:gap-6 p-4 rounded-2xl bg-card border border-border/50 shadow-sm"
               >
-                <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+                <div className="relative w-full sm:w-24 h-32 sm:h-24 rounded-xl overflow-hidden bg-muted flex-shrink-0">
                   <Image
                     src={item.image_url} 
                     alt={item.name}
                     fill
-                    sizes="96px"
+                    sizes="(max-width: 640px) 100vw, 96px"
                     className="object-cover"
                   />
                 </div>
                 
-                <div className="flex-1 flex flex-col justify-between">
+                <div className="flex-1 flex flex-col justify-between gap-4 sm:gap-0">
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-bold text-lg">{item.name}</h3>
