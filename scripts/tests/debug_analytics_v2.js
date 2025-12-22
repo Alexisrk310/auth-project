@@ -4,11 +4,11 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-    console.error('Missing env vars. Ensure .env.local is loaded or vars are set.');
+    console.error('Missing env vars. Ensure ../../.env.local is loaded or vars are set.');
     // Check if we can read them manually (copy-paste of logic from previous step)
     const fs = require('fs');
     try {
-        const envConfig = fs.readFileSync('.env.local', 'utf8');
+        const envConfig = fs.readFileSync('../../.env.local', 'utf8');
         envConfig.split('\n').forEach(line => {
             const parts = line.split('=');
             if (parts.length >= 2) {

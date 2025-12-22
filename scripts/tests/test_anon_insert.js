@@ -2,9 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 
-// Read .env.local manually
+// Read ../../.env.local manually
 try {
-    const envPath = path.resolve(__dirname, '.env.local');
+    const envPath = path.resolve(__dirname, '../../.env.local');
     if (fs.existsSync(envPath)) {
         const envConfig = fs.readFileSync(envPath, 'utf8');
         envConfig.split('\n').forEach(line => {
@@ -15,7 +15,7 @@ try {
         });
     }
 } catch (e) {
-    console.error('Error reading .env.local:', e);
+    console.error('Error reading ../../.env.local:', e);
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

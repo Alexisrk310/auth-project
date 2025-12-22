@@ -68,7 +68,9 @@ export default function LoginPage() {
             setLoading(false);
         } else {
             // Force hard redirect to ensure state update
-            window.location.href = '/'; 
+            // Soft redirect with refresh to update server components
+            router.refresh();
+            router.push('/'); 
         }
 	}
 

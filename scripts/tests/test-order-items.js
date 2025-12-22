@@ -4,7 +4,7 @@
 async function testOrderItemsInsertion() {
     const { createClient } = await import('@supabase/supabase-js');
 
-    // Get your Supabase credentials from .env.local
+    // Get your Supabase credentials from ../../.env.local
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     const supabase = createClient(supabaseUrl, supabaseKey);

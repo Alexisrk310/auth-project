@@ -3,7 +3,7 @@ const { createClient } = require('@supabase/supabase-js');
 // Load env vars
 const fs = require('fs');
 try {
-    const envConfig = fs.readFileSync('.env.local', 'utf8');
+    const envConfig = fs.readFileSync('../../.env.local', 'utf8');
     envConfig.split('\n').forEach(line => {
         const parts = line.split('=');
         if (parts.length >= 2) {
