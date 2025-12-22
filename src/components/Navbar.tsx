@@ -60,7 +60,12 @@ export default function Navbar() {
   const handleLogout = async () => {
     setIsLogoutModalOpen(false)
     try {
-        await supabase.auth.signOut()
+        // Race condition: If signOut takes longer than 2s, force logout anyway
+        // This prevents the UI from hanging if the network or token is unstable
+        const signOutPromise = supabase.auth.signOut()
+        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 2000))
+        
+        await Promise.race([signOutPromise, timeoutPromise])
     } catch (error) {
         console.error('Logout error (forcing cleanup):', error)
     } finally {
