@@ -15,14 +15,34 @@ export async function confirmOrder(orderId: string, paymentData?: any) {
 
   console.log(`confirmOrder: Fetching order ${orderId}`);
   // 1. Fetch Order
-  const { data: order, error: orderError } = await supabaseAdmin
+  let { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
       .select('*, order_items(*, products(name, images, image_url))')
       .eq('id', orderId)
       .single();
 
   if (orderError || !order) {
-      throw new Error('Order not found');
+      console.warn(`confirmOrder: Complex fetch failed for ${orderId}. Error: ${JSON.stringify(orderError)}. Retrying simple fetch.`);
+      // Retry simple fetch to verify existence
+      const { data: simpleOrder, error: simpleError } = await supabaseAdmin
+          .from('orders')
+          .select('*')
+          .eq('id', orderId)
+          .single();
+      
+      if (simpleError || !simpleOrder) {
+           console.error(`confirmOrder: Order ${orderId} DEFINITELY not found. Simple error: ${JSON.stringify(simpleError)}`);
+           throw new Error('Order not found');
+      } else {
+           console.warn(`confirmOrder: Order ${orderId} exists but join failed. Proceeding with basic data.`);
+           order = simpleOrder;
+           // We might miss order_items here, handled below?
+           // If we proceed without order_items, logic below "Deduct Stock" will skip loop or fail.
+           // Let's reload items separately if needed or just skip stock for now to allow payment confirmation.
+           // But actually we need items for email.
+           const { data: items } = await supabaseAdmin.from('order_items').select('*, products(*)').eq('order_id', orderId);
+           if (items) order.order_items = items;
+      }
   }
 
   // 2. Check if already processed

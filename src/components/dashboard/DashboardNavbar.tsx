@@ -186,7 +186,7 @@ export function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
                     initial={{ opacity: 0, y: -10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                    className="absolute right-0 mt-2 w-96 bg-card border border-border rounded-2xl shadow-xl z-50 overflow-hidden flex flex-col max-h-[500px]" // Increased width and max-h
+                    className="absolute -right-16 sm:right-0 mt-2 w-[85vw] sm:w-96 bg-card border border-border rounded-2xl shadow-xl z-50 overflow-hidden flex flex-col max-h-[60vh] sm:max-h-[500px]"
                   >
                     <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-muted/40 backdrop-blur-sm sticky top-0 z-10">
                       <div className="flex items-center gap-2">
