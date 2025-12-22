@@ -10,6 +10,42 @@ function PendingContent() {
   const { t } = useLanguage()
   const searchParams = useSearchParams()
   const paymentId = searchParams.get('payment_id') || searchParams.get('collection_id')
+  const orderId = searchParams.get('external_reference')
+  const [isChecking, setIsChecking] = React.useState(true)
+
+  // Polling for status update
+  React.useEffect(() => {
+      if (!orderId) {
+          setIsChecking(false)
+          return
+      }
+
+      const checkStatus = async () => {
+          try {
+              const { supabase } = await import('@/lib/supabase/client')
+              const { data, error } = await supabase
+                  .from('orders')
+                  .select('status')
+                  .eq('id', orderId)
+                  .single()
+              
+              if (data?.status === 'paid') {
+                  window.location.href = `/cart/success?payment_id=${paymentId}&external_reference=${orderId}`
+              }
+          } catch (e) {
+              console.error('Polling error', e)
+          }
+      }
+
+      // Check immediately
+      checkStatus()
+
+      // Poll every 3 seconds for 1 minute max (20 attempts)? Or just infinite loop while open?
+      // Let's do intervals
+      const interval = setInterval(checkStatus, 3000)
+
+      return () => clearInterval(interval)
+  }, [orderId, paymentId])
 
   return (
     <div className="min-h-[85vh] bg-background flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
