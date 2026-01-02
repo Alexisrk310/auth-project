@@ -541,7 +541,7 @@
   "auth.error.password_required": "La contraseña es requerida",
   "auth.error.password_length": "La contraseña debe tener al menos 6 caracteres",
   "auth.error.name_required": "El nombre es requerido",
-  "auth.success.created": "¡Cuenta creada! Por favor revisa tu correo.",
+  "auth.success.created": "¡Cuenta creada! Por favor verifica tu correo electrónico para continuar.",
   "auth.email_placeholder": "tu@correo.com",
   "discounts.exclusive_offers": "Ofertas Exclusivas",
   "discounts.premium": "Premium",
@@ -662,5 +662,14 @@
   "newsletter.error.invalid_email": "Dirección de correo inválida",
   "newsletter.error.already_subscribed": "Este correo ya está suscrito",
   "newsletter.error.failed": "Error al suscribirse",
-  "no_coupons": "No hay cupones disponibles"
+  "no_coupons": "No hay cupones disponibles",
+  "shop.error_title": "Error al cargar productos",
+  "common.retry": "Reintentar",
+  "common.user": "Usuario",
+  "cart.empty_error": "El carrito está vacío",
+  "error.config_missing": "Error de configuración del servidor",
+  "product.not_found_dynamic": "Producto no encontrado: {item}",
+  "cart.error_stock_dynamic": "No hay suficiente stock para {product}. Disponible: {stock}",
+  "checkout.error.create_order": "Error al crear el pedido",
+  "checkout.error.create_items": "Error al procesar los items"
 }

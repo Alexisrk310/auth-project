@@ -17,16 +17,16 @@ export async function POST(req: Request) {
         // Validate Email basic format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (metadata?.email && !emailRegex.test(metadata.email)) {
-            return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
+            return NextResponse.json({ error: 'validation.email_invalid' }, { status: 400 });
         }
 
         if (!items || items.length === 0) {
-            return NextResponse.json({ error: 'No items in cart' }, { status: 400 });
+            return NextResponse.json({ error: 'cart.empty_error' }, { status: 400 });
         }
 
         if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
             console.error("Missing MERCADO_PAGO_ACCESS_TOKEN")
-            return NextResponse.json({ error: 'Server Config Error: Missing MP Token' }, { status: 500 });
+            return NextResponse.json({ error: 'error.config_missing' }, { status: 500 });
         }
 
         // Use Admin Client for Order Creation to bypass RLS if needed, or stick to Anon if policies allow.
@@ -57,12 +57,13 @@ export async function POST(req: Request) {
 
             if (error || !product) {
                 console.error(`Product validation failed for ${item.id}`, error);
-                return NextResponse.json({ error: `Product not found: ${item.title || 'Unknown'}` }, { status: 400 });
+                return NextResponse.json({ error: 'product.not_found_dynamic', params: { item: item.title || 'Unknown' } }, { status: 400 });
             }
 
             if (product.stock < item.quantity) {
                 return NextResponse.json({
-                    error: `Desafortunadamente, no hay suficiente stock para ${product.name}. Disponible: ${product.stock}`
+                    error: 'cart.error_stock_dynamic',
+                    params: { product: product.name, stock: product.stock }
                 }, { status: 400 });
             }
 
@@ -137,7 +138,7 @@ export async function POST(req: Request) {
 
         if (insertError) {
             console.error('DB Insert Order Error:', insertError);
-            throw new Error('Failed to create order record');
+            throw new Error('checkout.error.create_order');
         }
 
         // 2. Insert Items
@@ -148,7 +149,7 @@ export async function POST(req: Request) {
         if (itemsError) {
             console.error('DB Insert Items Error:', itemsError);
             // Should rollback order? For now throw.
-            throw new Error('Failed to create order items');
+            throw new Error('checkout.error.create_items');
         }
 
         console.log(`Order ${orderId} created successfully. Generating MP Preference...`);

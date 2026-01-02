@@ -16,86 +16,99 @@ import {
 } from '@/components/ui/card';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useLanguage } from '@/components/LanguageProvider';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/Toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createLoginSchema, LoginValues } from '@/lib/validations/auth';
 import { useMemo } from 'react';
 
 export default function LoginPage() {
-    const { t, language, setLanguage } = useLanguage();
-    const [loading, setLoading] = useState(false);
-    const [submitError, setSubmitError] = useState<string | null>(null);
-    const { user } = useAuth(); 
-    const router = useRouter();
+	const { t, language, setLanguage } = useLanguage();
+	const [loading, setLoading] = useState(false);
+	const [submitError, setSubmitError] = useState<string | null>(null);
+	const { user } = useAuth();
+	const router = useRouter();
+	const searchParams = useSearchParams();
+	const { addToast } = useToast();
 
-    const schema = useMemo(() => createLoginSchema(t), [t, language]);
+	const schema = useMemo(() => createLoginSchema(t), [t, language]);
 
-    // React Hook Form
-    const { register, handleSubmit, formState: { errors } } = useForm<LoginValues>({
-        resolver: zodResolver(schema),
-        defaultValues: {
-            email: '',
-            password: '',
-        }
-    });
+	// React Hook Form
+	const { register, handleSubmit, formState: { errors } } = useForm<LoginValues>({
+		resolver: zodResolver(schema),
+		defaultValues: {
+			email: '',
+			password: '',
+		}
+	});
 
-    useEffect(() => {
-        if (user) {
-            router.replace('/');
-        }
-    }, [user, router]);
+	useEffect(() => {
+		if (user) {
+			router.replace('/');
+		}
+
+		const message = searchParams.get('message');
+		if (message) {
+			addToast(message, 'success');
+			// Clean URL
+			const newUrl = new URL(window.location.href);
+			newUrl.searchParams.delete('message');
+			window.history.replaceState({}, '', newUrl.toString());
+		}
+	}, [user, router, searchParams, addToast]);
+
 
 	const onSubmit = async (data: LoginValues) => {
-        setLoading(true);
-        setSubmitError(null);
+		setLoading(true);
+		setSubmitError(null);
 
 		const { error } = await supabase.auth.signInWithPassword({
-            email: data.email,
-            password: data.password,
-        });
+			email: data.email,
+			password: data.password,
+		});
 
-        if (error) {
-            if (error.message === 'Invalid login credentials') {
-                setSubmitError(t('auth.error.invalid_credentials'));
-            } else if (error.message === 'Email not confirmed') {
-                setSubmitError(t('auth.error.email_not_confirmed'));
-            } else {
-                setSubmitError(error.message);
-            }
-            setLoading(false);
-        } else {
-            // Force hard redirect to ensure state update
-            // Soft redirect with refresh to update server components
-            router.refresh();
-            router.push('/'); 
-        }
+		if (error) {
+			if (error.message === 'Invalid login credentials') {
+				setSubmitError(t('auth.error.invalid_credentials'));
+			} else if (error.message === 'Email not confirmed') {
+				setSubmitError(t('auth.error.email_not_confirmed'));
+			} else {
+				setSubmitError(error.message);
+			}
+			setLoading(false);
+		} else {
+			// Force hard redirect to ensure state update
+			// Soft redirect with refresh to update server components
+			router.refresh();
+			router.push('/');
+		}
 	}
 
 	return (
 		<div className="min-h-screen w-full flex items-center justify-center bg-background p-4 relative overflow-hidden">
-            {/* Ambient Background */}
-            <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] pointer-events-none" />
-            <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-accent/20 rounded-full blur-[120px] pointer-events-none" />
+			{/* Ambient Background */}
+			<div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] pointer-events-none" />
+			<div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-accent/20 rounded-full blur-[120px] pointer-events-none" />
 
-            {/* Language Switcher */}
-            <div className="absolute top-4 right-4 z-50">
-                <div className="flex items-center gap-2 bg-background/50 backdrop-blur-md p-1.5 rounded-full border border-border/50 shadow-sm">
-                    <Globe className="w-4 h-4 ml-2 text-muted-foreground" />
-                    <select 
-                        value={language} 
-                        onChange={(e) => setLanguage(e.target.value as any)}
-                        className="bg-transparent border-none text-sm font-medium focus:ring-0 cursor-pointer pr-2"
-                    >
-                        <option value="es">ES</option>
-                        <option value="en">EN</option>
-                        <option value="fr">FR</option>
-                        <option value="pt">PT</option>
-                    </select>
-                </div>
-            </div>
+			{/* Language Switcher */}
+			<div className="absolute top-4 right-4 z-50">
+				<div className="flex items-center gap-2 bg-background/50 backdrop-blur-md p-1.5 rounded-full border border-border/50 shadow-sm">
+					<Globe className="w-4 h-4 ml-2 text-muted-foreground" />
+					<select
+						value={language}
+						onChange={(e) => setLanguage(e.target.value as any)}
+						className="bg-transparent border-none text-sm font-medium focus:ring-0 cursor-pointer pr-2"
+					>
+						<option value="es">ES</option>
+						<option value="en">EN</option>
+						<option value="fr">FR</option>
+						<option value="pt">PT</option>
+					</select>
+				</div>
+			</div>
 
 			<div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center z-10">
 				<div className="hidden lg:flex flex-col justify-center space-y-8 px-8">
@@ -131,7 +144,7 @@ export default function LoginPage() {
 
 						<div className="grid grid-cols-2 gap-4 pt-8">
 							<div className="space-y-2 p-4 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm">
-                                <h3 className="font-semibold text-primary">{t('auth.premium')}</h3>
+								<h3 className="font-semibold text-primary">{t('auth.premium')}</h3>
 								<p className="text-sm text-muted-foreground leading-relaxed">
 									{t('auth.premium.desc')}
 								</p>
@@ -176,14 +189,14 @@ export default function LoginPage() {
 									<Input
 										id="email"
 										type="email"
-                                        placeholder={t('auth.placeholder.email')}
-                                        className="h-11 bg-background/50"
-                                        disabled={loading}
-                                        {...register("email")}
+										placeholder={t('auth.placeholder.email')}
+										className="h-11 bg-background/50"
+										disabled={loading}
+										{...register("email")}
 									/>
-                                    {errors.email && (
-                                        <p className="text-xs text-destructive font-medium">{errors.email.message}</p>
-                                    )}
+									{errors.email && (
+										<p className="text-xs text-destructive font-medium">{errors.email.message}</p>
+									)}
 								</div>
 
 								<div className="space-y-2">
@@ -195,14 +208,14 @@ export default function LoginPage() {
 									<Input
 										id="password"
 										type="password"
-                                        placeholder={t('auth.placeholder.password')}
-                                        className="h-11 bg-background/50"
-                                        disabled={loading}
-                                        {...register("password")}
+										placeholder={t('auth.placeholder.password')}
+										className="h-11 bg-background/50"
+										disabled={loading}
+										{...register("password")}
 									/>
-                                    {errors.password && (
-                                        <p className="text-xs text-destructive font-medium">{errors.password.message}</p>
-                                    )}
+									{errors.password && (
+										<p className="text-xs text-destructive font-medium">{errors.password.message}</p>
+									)}
 								</div>
 
 								<Button
@@ -223,9 +236,9 @@ export default function LoginPage() {
 									{t('auth.create')}
 								</Link>
 							</p>
-                            <Link href="/shop" className="w-full text-center text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-2 pt-2">
-                                ← {t('home.view_all')}
-                            </Link>
+							<Link href="/shop" className="w-full text-center text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-2 pt-2">
+								← {t('home.view_all')}
+							</Link>
 						</CardFooter>
 					</Card>
 				</div>

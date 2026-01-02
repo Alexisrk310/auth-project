@@ -563,5 +563,17 @@
   "dash.end_date": "Data de Término",
   "dash.sales_report": "Relatório de Vendas",
   "dash.sale_price": "Preço de Oferta",
-  "no_coupons": "Nenhum cupom disponível"
+  "newsletter.error.invalid_email": "Endereço de email inválido",
+  "newsletter.error.already_subscribed": "Este email já está inscrito",
+  "newsletter.error.failed": "Falha na inscrição",
+  "no_coupons": "Nenhum cupom disponível",
+  "shop.error_title": "Erro ao carregar produtos",
+  "common.retry": "Tentar novamente",
+  "common.user": "Usuário",
+  "cart.empty_error": "O carrinho está vazio",
+  "error.config_missing": "Erro de configuração do servidor",
+  "product.not_found_dynamic": "Produto não encontrado: {item}",
+  "cart.error_stock_dynamic": "Estoque insuficiente para {product}. Disponível: {stock}",
+  "checkout.error.create_order": "Falha ao criar pedido",
+  "checkout.error.create_items": "Falha ao processar itens"
 }

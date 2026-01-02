@@ -647,5 +647,17 @@
   "dash.end_date": "End Date",
   "dash.sales_report": "Sales Report",
   "dash.sale_price": "Sale Price",
-  "no_coupons": "No coupons available"
+  "newsletter.error.invalid_email": "Invalid email address",
+  "newsletter.error.already_subscribed": "This email is already subscribed",
+  "newsletter.error.failed": "Failed to subscribe",
+  "no_coupons": "No coupons available",
+  "shop.error_title": "Error loading products",
+  "common.retry": "Retry",
+  "common.user": "User",
+  "cart.empty_error": "Cart is empty",
+  "error.config_missing": "Server Configuration Error",
+  "product.not_found_dynamic": "Product not found: {item}",
+  "cart.error_stock_dynamic": "Not enough stock for {product}. Available: {stock}",
+  "checkout.error.create_order": "Failed to create order",
+  "checkout.error.create_items": "Failed to process items"
 }
